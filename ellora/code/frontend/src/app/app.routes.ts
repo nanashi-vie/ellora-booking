@@ -1,10 +1,11 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './guards/auth.guard';
-import { roleGuard } from './guards/role.guard';
+import { nonOwnerGuard, roleGuard } from './guards/role.guard';
 
 export const routes: Routes = [
   {
     path: '',
+    canActivateChild: [nonOwnerGuard],
     loadComponent: () => import('./layouts/main-layout/main-layout.component').then(m => m.MainLayout),
     children: [
       {
@@ -25,6 +26,7 @@ export const routes: Routes = [
       },
       {
         path: 'booking',
+        data: { customerOnly: true },
         canActivate: [authGuard],
         loadComponent: () => import('./features/booking/booking.component').then(m => m.BookingComponent)
       },
@@ -54,6 +56,7 @@ export const routes: Routes = [
       },
       {
         path: 'business-registration',
+        data: { customerOnly: true },
         canActivate: [authGuard],
         loadComponent: () => import('./features/business-registration/business-registration.component').then(m => m.BusinessRegistrationComponent)
       },
@@ -125,16 +128,19 @@ export const routes: Routes = [
   },
   {
     path: 'login',
+    canActivate: [nonOwnerGuard],
     loadComponent: () =>
       import('./features/auth/login/login.component').then((m) => m.LoginComponent),
   },
   {
     path: 'register',
+    canActivate: [nonOwnerGuard],
     loadComponent: () =>
       import('./features/auth/register/register.component').then((m) => m.RegisterComponent),
   },
   {
     path: 'forgot-password',
+    canActivate: [nonOwnerGuard],
     loadComponent: () =>
       import('./features/auth/forgot-password/forgot-password.component').then(
         (m) => m.ForgotPasswordComponent,

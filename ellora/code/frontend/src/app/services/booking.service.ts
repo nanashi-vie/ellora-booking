@@ -21,6 +21,7 @@ export class BookingService implements OnDestroy {
   private readonly api = inject(BookingApiService);
   private readonly owner = inject(OwnerApiService);
   bookings = signal<BookingEvent[]>([]);
+  readonly salonName = signal('');
   focusedBookingId = signal<number | null>(null);
   pendingBookings = computed(() => this.bookings().filter(item => item.status === 'pending'));
   pendingCount = signal(0);
@@ -118,6 +119,7 @@ export class BookingService implements OnDestroy {
     this.isLoading.set(false);
     this.updatingBookings.set(new Set());
     this.bookings.set([]); this.pendingCount.set(0); this.focusedBookingId.set(null);
+    this.salonName.set('');
     this.salonId = undefined; this.seen.clear(); this.error.set(''); this.soundError.set('');
     clearInterval(this.poll);
     this.poll = undefined;
@@ -137,6 +139,7 @@ export class BookingService implements OnDestroy {
     try {
       const salon = await this.owner.salon();
       if (this.disposed || generation !== this.generation) return;
+      this.salonName.set(salon.name);
       if (this.salonId !== salon.id) {
         this.stopRinging(); this.salonId = salon.id;
         try { this.seen = new Set(JSON.parse(sessionStorage.getItem('ellora-booking-alerts-' + salon.id) || '[]')); } catch { this.seen = new Set(); }

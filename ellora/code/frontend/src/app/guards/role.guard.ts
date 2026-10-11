@@ -9,6 +9,7 @@ export function roleHome(role: Profile['role']): string {
 }
 // Customer-facing and sign-in routes must not become a second workspace for owners.
 export const nonOwnerGuard: CanActivateFn = async (route, state) => {
+  if (!isPlatformBrowser(inject(PLATFORM_ID))) return true;
   const auth = inject(AuthService);
   const profiles = inject(ProfileApiService);
   const router = inject(Router);

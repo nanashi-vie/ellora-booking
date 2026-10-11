@@ -12,13 +12,15 @@ describe('Dev calendar and new booking features', () => {
   beforeEach(() => {
     vi.resetAllMocks(); sessionStorage.clear();
     TestBed.configureTestingModule({ providers: [{ provide: BookingApiService, useValue: api }, { provide: OwnerApiService, useValue: owner }] });
-    owner.salon.mockResolvedValue({ id: 42 });
+    owner.salon.mockResolvedValue({ id: 42, name: 'Ellora Nail Studio' });
     api.getSalonBookings.mockResolvedValue({ content: [booking], last: true });
   });
   afterEach(() => { TestBed.resetTestingModule(); vi.useRealTimers(); vi.unstubAllGlobals(); });
   it('keeps dev customer names/calendar data and supports the new status sequence', async () => {
     const service = TestBed.inject(BookingService);
     await service.loadSalonBookings();
+    expect(service.salonName()).toBe('Ellora Nail Studio');
+    expect(owner.salon).toHaveBeenCalledTimes(1);
     expect(service.bookings()[0]).toMatchObject({ customerName: 'Khách dev', startTime: 10.5, duration: 1, status: 'pending' });
     expect(service.pendingCount()).toBe(1);
     await service.startBooking(9); expect(api.updateBookingStatus).toHaveBeenLastCalledWith(9, { status: 'IN_PROGRESS' });
@@ -38,7 +40,8 @@ describe('Dev calendar and new booking features', () => {
     await vi.advanceTimersByTimeAsync(30000); expect(service.ringing()).toBe(false);
     await service.loadSalonBookings(); expect(service.ringing()).toBe(false);
     service.start(); await vi.advanceTimersByTimeAsync(5000);
-    service.stop(); const calls = api.getSalonBookings.mock.calls.length;
+    service.stop(); expect(service.salonName()).toBe('');
+    const calls = api.getSalonBookings.mock.calls.length;
     await vi.advanceTimersByTimeAsync(10000); expect(api.getSalonBookings).toHaveBeenCalledTimes(calls);
     service.start(); await vi.advanceTimersByTimeAsync(5000); expect(api.getSalonBookings.mock.calls.length).toBeGreaterThan(calls);
   });

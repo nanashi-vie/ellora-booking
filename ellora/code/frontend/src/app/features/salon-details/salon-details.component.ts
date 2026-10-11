@@ -1,9 +1,10 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, PLATFORM_ID, ViewChild, computed, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, DestroyRef, ElementRef, OnDestroy, OnInit, PLATFORM_ID, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { SalonApiService, SalonWorkingHour } from '../../services/salon-api.service';
 import { ServiceCard } from '../../shared/components/service-card/service-card.component';
 import { Review, Salon, Service } from '../../models/ellora.model';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-salon-details',
@@ -17,6 +18,8 @@ export class SalonDetails implements OnInit, AfterViewInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private readonly platformId = inject(PLATFORM_ID);
   private titleObserver?: IntersectionObserver;
+  private readonly destroyRef = inject(DestroyRef);
+  private loadVersion = 0;
 
   salon = signal<Salon | null>(null);
   workingHours = signal<SalonWorkingHour[]>([]);
@@ -27,24 +30,33 @@ export class SalonDetails implements OnInit, AfterViewInit, OnDestroy {
   nearbySalons = signal<Salon[]>([]);
 
   ngOnInit(): void {
-    this.route.paramMap.subscribe(params => {
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
       const id = params.get('id');
       if (id) void this.load(id);
     });
   }
 
   private async load(id: string): Promise<void> {
+    const version = ++this.loadVersion;
+    const current = () => version === this.loadVersion;
     this.salon.set(null); this.services.set([]); this.reviews.set([]); this.selectedServices.set([]);
+    this.workingHours.set([]); this.nearbySalons.set([]); this.error.set('');
+    this.showStickySummary.set(false); this.titleObserver?.disconnect();
     try {
-      const [salon, services, reviews, nearby, workingHours] = await Promise.all([
-        this.salonApi.detail(id), this.salonApi.services(id), this.salonApi.reviews(id), this.salonApi.search('', 0, 5), this.salonApi.workingHours(id)
+      await Promise.all([
+        this.salonApi.detail(id).then(salon => {
+          if (!current()) return;
+          this.salon.set(salon);
+          if (isPlatformBrowser(this.platformId)) setTimeout(() => { if (current()) this.observeTitle(); }, 0);
+        }),
+        this.salonApi.services(id).then(services => { if (current()) this.services.set(services); }),
+        this.salonApi.reviews(id).then(reviews => { if (current()) this.reviews.set(reviews.content); }),
+        this.salonApi.search('', 0, 5).then(nearby => {
+          if (current()) this.nearbySalons.set(nearby.content.filter(item => item.id !== id).slice(0, 4));
+        }),
+        this.salonApi.workingHours(id).then(hours => { if (current()) this.workingHours.set(hours); })
       ]);
-      this.salon.set(salon); this.services.set(services); this.reviews.set(reviews.content);
-      this.workingHours.set(workingHours);
-      this.nearbySalons.set(nearby.content.filter(item => item.id !== id).slice(0, 4));
-      this.error.set('');
-      if (isPlatformBrowser(this.platformId)) setTimeout(() => this.observeTitle(), 0);
-    } catch { this.error.set('Không tải được thông tin salon. Vui lòng thử lại.'); }
+    } catch { if (current()) this.error.set('Một số thông tin salon chưa tải được. Vui lòng thử lại.'); }
   }
 
   @ViewChild('salonTitle')
@@ -86,6 +98,7 @@ export class SalonDetails implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.loadVersion++;
     this.titleObserver?.disconnect();
   }
 
