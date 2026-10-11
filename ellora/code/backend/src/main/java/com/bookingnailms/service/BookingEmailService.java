@@ -6,7 +6,7 @@ import com.bookingnailms.repository.BookingEmailRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -48,14 +48,15 @@ public class BookingEmailService {
         if (!enabled || from == null || from.isBlank()) return;
         for (BookingEmail email : emails.lockDueEmails()) {
             try {
-                SimpleMailMessage message = new SimpleMailMessage();
-                message.setFrom(from);
-                message.setTo(email.getRecipient());
-                message.setSubject(email.getSubject());
-                message.setText(email.getBody());
+                var message = sender.createMimeMessage();
+                var helper = new MimeMessageHelper(message, true, "UTF-8");
+                helper.setFrom(from);
+                helper.setTo(email.getRecipient());
+                helper.setSubject(email.getSubject());
+                helper.setText(email.getBody(), BookingEmailTemplate.render(email.getKind(), email.getBody()));
                 sender.send(message);
                 email.setSentAt(Instant.now());
-            } catch (org.springframework.mail.MailException ex) {
+            } catch (org.springframework.mail.MailException | jakarta.mail.MessagingException ex) {
                 email.setAttempts(email.getAttempts() + 1);
                 email.setNextAttemptAt(Instant.now().plusSeconds(Math.min(3600L, 30L * email.getAttempts())));
                 log.warn("Booking email {} failed ({}); will retry", email.getId(), ex.getClass().getSimpleName());

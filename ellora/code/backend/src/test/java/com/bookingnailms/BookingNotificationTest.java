@@ -7,7 +7,8 @@ import com.bookingnailms.repository.*;
 import com.bookingnailms.service.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.mail.MailSendException;
-import org.springframework.mail.SimpleMailMessage;
+import jakarta.mail.Session;
+import jakarta.mail.internet.MimeMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.util.ReflectionTestUtils;
 import java.time.LocalDateTime;
@@ -17,6 +18,30 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class BookingNotificationTest {
+    @Test void sendsPlainTextAndHtmlAlternatives() throws Exception {
+        BookingEmailRepository repository = mock(BookingEmailRepository.class);
+        JavaMailSender sender = mock(JavaMailSender.class);
+        BookingEmailService service = new BookingEmailService(repository, sender);
+        ReflectionTestUtils.setField(service, "enabled", true);
+        ReflectionTestUtils.setField(service, "from", "sender@example.com");
+        BookingEmail email = new BookingEmail();
+        email.setRecipient("salon@example.com"); email.setSubject("Ellora - Nhắc phí");
+        email.setKind("BILLING_REMINDER"); email.setBody("Số tiền: 100000 VNĐ");
+        when(repository.lockDueEmails()).thenReturn(List.of(email));
+        MimeMessage message = new MimeMessage((Session) null);
+        when(sender.createMimeMessage()).thenReturn(message);
+        service.deliver();
+        verify(sender).send(message);
+        message.saveChanges();
+        var output = new java.io.ByteArrayOutputStream();
+        message.writeTo(output);
+        String mime = output.toString(java.nio.charset.StandardCharsets.UTF_8);
+        assertTrue(mime.contains("multipart/alternative"));
+        assertTrue(java.util.regex.Pattern.compile("text/plain;\\s*charset=UTF-8", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(mime).find());
+        assertTrue(java.util.regex.Pattern.compile("text/html;\\s*charset=UTF-8", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(mime).find());
+        assertNotNull(email.getSentAt());
+    }
+
     @Test void newBookingQueuesShopEmailAndOtherOwnersCannotConfirm() {
         Booking booking = booking();
         booking.getSalon().setStatus(com.bookingnailms.enums.SalonStatus.ACTIVE);
@@ -77,7 +102,9 @@ class BookingNotificationTest {
         ReflectionTestUtils.setField(service, "from", "sender@example.com");
         BookingEmail email = new BookingEmail(); email.setRecipient("customer@example.com");
         when(repository.lockDueEmails()).thenReturn(List.of(email));
-        doThrow(new MailSendException("offline")).doNothing().when(sender).send(any(SimpleMailMessage.class));
+        email.setSubject("Ellora"); email.setBody("Thông tin lịch hẹn"); email.setKind("CONFIRMED");
+        when(sender.createMimeMessage()).thenAnswer(invocation -> new MimeMessage((Session) null));
+        doThrow(new MailSendException("offline")).doNothing().when(sender).send(any(MimeMessage.class));
         service.deliver();
         assertNull(email.getSentAt()); assertEquals(1, email.getAttempts());
         assertTrue(email.getNextAttemptAt().isAfter(Instant.now()));

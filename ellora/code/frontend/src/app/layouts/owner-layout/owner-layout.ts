@@ -29,6 +29,8 @@ export class OwnerLayout implements OnInit, OnDestroy {
   ngOnDestroy(): void { this.bookingService.stop(); }
   pendingCount = this.bookingService.pendingCount;
   pendingBookings = this.bookingService.pendingBookings;
+  readonly salonName = this.bookingService.salonName;
+  readonly salonLoadError = this.bookingService.error;
 
   async ngOnInit(): Promise<void> {
     this.bookingService.start();

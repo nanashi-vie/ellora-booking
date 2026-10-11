@@ -9,6 +9,12 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
     return next(request);
   }
 
+  const path = request.url.slice(apiConfig.baseUrl.length).split(/[?#]/)[0];
+  // Public reads do not need Cognito or the backend's authenticated-user lookups.
+  if (request.method === 'GET' && (/^\/customer\/salons(?:\/|$)/.test(path) || path === '/ping')) {
+    return next(request);
+  }
+
   const authService = inject(AuthService);
 
   return from(authService.getAccessToken()).pipe(

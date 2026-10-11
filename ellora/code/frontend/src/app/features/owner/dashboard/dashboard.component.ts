@@ -1,5 +1,3 @@
-import { OwnerRevenueComponent } from './revenue.component';
-import { OwnerBillingComponent } from './billing.component';
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
@@ -15,7 +13,7 @@ import { vnDate } from '../../../services/billing-api.service';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, BaseChartDirective, PhotoUpload, OwnerRevenueComponent, OwnerBillingComponent],
+  imports: [CommonModule, RouterModule, BaseChartDirective, PhotoUpload],
   providers: [provideCharts(withDefaultRegisterables())],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
@@ -37,13 +35,13 @@ export class Dashboard implements OnInit {
     try {
       const [salon, summary] = await Promise.all([this.owner.salon(), this.owner.summary()]);
       this.salon.set(salon);
-      const bookings: BookingItem[] = [];
-      for (let page = 0; page < 10; page++) {
-        const result = await this.bookingApi.getSalonBookings(salon.id, undefined, page, 100);
-        bookings.push(...result.content);
-        if (result.last) break;
-      }
-      const [services, reviews] = await Promise.all([this.owner.services(), this.owner.reviews(0)]);
+      this.stats.set({
+        totalBookings: summary.completedBookings,
+        revenue: summary.monthlyRevenue ?? 0,
+        monthlyCustomers: summary.monthlyCustomers ?? 0,
+        averageRating: summary.averageRating ?? 0,
+        upcomingAppointments: summary.pendingBookings + summary.confirmedBookings
+      });
       const today = vnDate();
       const monthStart = `${today.slice(0, 7)}-01`;
       const previousStartDate = new Date(`${monthStart}T00:00:00`);
@@ -52,11 +50,21 @@ export class Dashboard implements OnInit {
       const previousEndDate = new Date(`${monthStart}T00:00:00`);
       previousEndDate.setDate(0);
       const previousEnd = `${previousEndDate.getFullYear()}-${String(previousEndDate.getMonth() + 1).padStart(2, '0')}-${String(previousEndDate.getDate()).padStart(2, '0')}`;
-      const currentMonth = bookings.filter(item => item.status === 'COMPLETED' && item.scheduledAt.slice(0, 10) >= monthStart && item.scheduledAt.slice(0, 10) <= today);
-      const [revenue, previousRevenue] = await Promise.all([
+      const [bookings, services, reviews, revenue, previousRevenue] = await Promise.all([
+        (async () => {
+          const items: BookingItem[] = [];
+          for (let page = 0; page < 10; page++) {
+            const result = await this.bookingApi.getSalonBookings(salon.id, undefined, page, 100);
+            items.push(...result.content);
+            if (result.last) break;
+          }
+          return items;
+        })(),
+        this.owner.services(), this.owner.reviews(0),
         this.owner.revenue(monthStart, today).catch(() => null),
         this.owner.revenue(previousStart, previousEnd).catch(() => null)
       ]);
+      const currentMonth = bookings.filter(item => item.status === 'COMPLETED' && item.scheduledAt.slice(0, 10) >= monthStart && item.scheduledAt.slice(0, 10) <= today);
       const monthlyRevenue = summary.monthlyRevenue ?? revenue?.gross ?? currentMonth.reduce((sum, item) => sum + (item.servicePrice || 0), 0);
       const monthlyCustomers = summary.monthlyCustomers ?? new Set(currentMonth.map(item => item.customerName)).size;
       const averageRating = summary.averageRating ?? (reviews.content.length
