@@ -74,19 +74,28 @@
         <div>
           <h3 class="text-lg font-serif text-[#8C3A5A]">Xu hướng doanh thu</h3>
           <div class="flex gap-4 mt-2 text-xs font-semibold text-gray-500">
-            <span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-[#8C3A5A]"></div> Tháng này</span>
-            <span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-[#D4C4B7]"></div> Tháng trước</span>
+            <span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-[#8C3A5A]"></div> {{ revenueGroup() === 'month' ? 'Năm nay' : 'Tháng này' }}</span>
+            <span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-[#D4C4B7]"></div> {{ revenueGroup() === 'month' ? 'Năm trước' : 'Tháng trước' }}</span>
           </div>
         </div>
-        <div class="flex bg-gray-50 p-1 rounded-lg">
-          <button class="px-3 py-1 text-xs font-semibold bg-white shadow-sm rounded-md text-gray-800">Ngày</button>
-          <button class="px-3 py-1 text-xs font-semibold text-gray-500 hover:text-gray-800">Tuần</button>
-          <button class="px-3 py-1 text-xs font-semibold text-gray-500 hover:text-gray-800">Tháng</button>
+        <div class="flex bg-gray-50 p-1 rounded-lg" role="group" aria-label="Nhóm doanh thu theo thời gian">
+          @for (period of revenuePeriods; track period.value) {
+            <button type="button" (click)="setRevenueGroup(period.value)" [attr.aria-pressed]="revenueGroup() === period.value"
+              class="px-3 py-1 text-xs font-semibold rounded-md"
+              [ngClass]="revenueGroup() === period.value ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-800'">{{ period.label }}</button>
+          }
         </div>
       </div>
-      <div class="h-[250px] w-full">
-        @if (revenueChartData.datasets[0].data.length) {
-          <canvas baseChart [data]="revenueChartData" [options]="revenueChartOptions" type="line" aria-label="Doanh thu tháng này và tháng trước"></canvas>
+      <div class="h-[250px] w-full" [attr.aria-busy]="revenueLoading()">
+        @if (revenueLoading()) {
+          <p role="status" class="text-center text-gray-500 py-12">Đang tải doanh thu…</p>
+        } @else if (revenueError()) {
+          <div class="text-center py-12">
+            <p role="alert" class="text-red-700">{{ revenueError() }}</p>
+            <button type="button" (click)="loadRevenueTrend()" class="text-sm font-semibold text-[#8C3A5A] underline mt-3">Thử lại</button>
+          </div>
+        } @else if (revenueChartData.datasets[0].data.length) {
+          <canvas baseChart [data]="revenueChartData" [options]="revenueChartOptions" type="line" [attr.aria-label]="revenueGroup() === 'month' ? 'Doanh thu từng tháng của năm nay và năm trước' : 'Doanh thu tháng này và tháng trước theo ' + (revenueGroup() === 'week' ? 'tuần' : 'ngày')"></canvas>
         } @else { <p class="text-center text-charcoal-800/50 py-12">Chưa có dữ liệu doanh thu</p> }
       </div>
     </div>
@@ -126,12 +135,16 @@
         <a href="#" class="text-xs font-bold text-[#8C3A5A] hover:underline">Xem tất cả</a>
       </div>
       <div class="flex flex-col gap-6">
-        @for (staff of staffPerformance; track staff.name) {
+        @for (staff of staffPerformance; track staff.id) {
           <div>
             <div class="flex justify-between items-center mb-2">
-              <div class="flex items-center gap-3">
-                <img [src]="staff.avatar" class="w-10 h-10 rounded-full object-cover">
-                <div>
+              <div class="flex items-center gap-3 min-w-0">
+                @if (employeeAvatars().get(staff.id ?? -1); as avatar) {
+                  <img [src]="avatar" [alt]="'Ảnh của ' + staff.name" width="40" height="40" loading="lazy" (error)="employeePhotoFailed(staff.id, avatar)" class="w-10 h-10 shrink-0 rounded-full object-cover">
+                } @else {
+                  <span aria-hidden="true" class="w-10 h-10 shrink-0 rounded-full bg-[#FDF6F8] text-[#8C3A5A] inline-flex items-center justify-center text-sm font-semibold">{{ staff.initials }}</span>
+                }
+                <div class="min-w-0">
                   <p class="text-sm font-bold text-gray-900">{{ staff.name }}</p>
                   <p class="text-xs text-gray-500 font-medium">{{ staff.role }}</p>
                 </div>
@@ -165,6 +178,7 @@
       </div>
     </div>
     
+    <div class="overflow-x-auto">
     <table class="w-full text-left">
       <thead>
         <tr class="text-xs font-bold text-gray-500 uppercase border-b border-gray-100">
@@ -181,7 +195,7 @@
         @for (trx of transactions; track trx.id) {
           <tr class="border-b border-gray-50 hover:bg-gray-50/50">
             <td class="py-4 px-4 text-sm font-bold text-[#8C3A5A]">{{ trx.id }}</td>
-            <td class="py-4 px-4 text-sm font-semibold text-gray-900">{{ trx.customer }}</td>
+            <td class="py-4 px-4 text-sm font-semibold text-gray-900">{{ trx.customer }}<p class="mt-1 text-xs font-normal text-gray-500 whitespace-nowrap">{{ trx.phone || 'Chưa có SĐT' }}</p></td>
             <td class="py-4 px-4 text-sm font-medium text-gray-600">{{ trx.service }}</td>
             <td class="py-4 px-4 text-sm font-medium text-gray-600">{{ trx.staff }}</td>
             <td class="py-4 px-4 text-sm font-medium text-gray-600">{{ trx.date }}</td>
@@ -197,6 +211,7 @@
         } @empty { <tr><td colspan="7" class="py-8 text-center text-gray-500">Chưa có dữ liệu giao dịch</td></tr> }
       </tbody>
     </table>
+    </div>
     
   </div>
 
@@ -216,5 +231,3 @@
   }
 
 </div>
-
-@if (salon()) { <app-owner-revenue /><app-owner-billing /> }

@@ -9,6 +9,9 @@ import com.bookingnailms.service.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -20,7 +23,8 @@ class BookingAvailabilityTest {
     private final EmployeeRepository employees = mock(EmployeeRepository.class);
     private final UserRepository users = mock(UserRepository.class);
     private final BookingEmailService emails = mock(BookingEmailService.class);
-    private final BookingService service = new BookingService(bookings, salons, services, employees, users, emails);
+    private final BookingService service = new BookingService(bookings, salons, services, employees, users, emails, null,
+            Clock.fixed(Instant.parse("2026-10-01T00:00:00Z"), ZoneOffset.UTC));
     private final UUID customerId = UUID.randomUUID();
     private final LocalDateTime start = LocalDateTime.of(2026, 10, 1, 9, 30);
     private final Salon salon = Salon.builder().id(1L).status(SalonStatus.ACTIVE).build();

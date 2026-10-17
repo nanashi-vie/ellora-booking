@@ -30,8 +30,9 @@
         </div>
 
         <p class="mt-1 truncate text-sm font-medium text-brand-darker/60">
-          {{ salon().city }}
+          {{ salon().district ? salon().district + ', ' : '' }}{{ salon().city }}
         </p>
+        @if (salon().distance !== undefined) { <p class="mt-1 text-sm font-semibold text-brand-darker">Cách bạn khoảng {{ salon().distance | number:'1.1-1' }} km</p> }
         <p class="mt-0.5 truncate text-sm font-medium text-brand-darker/50">
           Nail Salon · {{ salon().reviewCount }} đánh giá
         </p>
@@ -63,7 +64,7 @@
     </div>
 
     <!-- Content -->
-    <div class="flex flex-col gap-2 px-1">
+    <div class="flex flex-col gap-2 px-4 pb-4">
       <h3 class="font-serif text-xl font-medium text-brand-darker line-clamp-1 group-hover:text-brand transition-colors">
         {{ salon().name }}
       </h3>
@@ -73,16 +74,17 @@
       </p>
 
       <div class="flex items-center justify-between mt-2 pt-2">
-        <div class="flex items-center gap-1.5 text-xs font-medium text-brand-darker/60">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <div class="flex min-w-0 items-start gap-1.5 text-xs font-medium text-brand-darker/80">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          địa chỉ
+          <span class="line-clamp-2 break-words">{{ salon().address }}{{ salon().district ? ', ' + salon().district : '' }}{{ salon().city ? ', ' + salon().city : '' }}</span>
         </div>
 
-        <span class="text-xs font-medium text-brand hover:text-brand-darker transition-colors">Đặt ngay</span>
+        <span class="shrink-0 ml-3 text-xs font-medium text-brand-darker transition-colors">Xem tiệm</span>
       </div>
+      @if (salon().distance !== undefined) { <p class="text-sm font-semibold text-brand-darker">Cách bạn khoảng {{ salon().distance | number:'1.1-1' }} km</p> }
     </div>
   </a>
 }

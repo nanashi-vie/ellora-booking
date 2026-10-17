@@ -19,7 +19,8 @@ export interface Salon {
   description: string;
   address: string;
   city: string;
-  coordinates: { lat: number; lng: number };
+  district?: string | null;
+  coordinates: { lat: number; lng: number } | null;
   rating: number;
   reviewCount: number;
   images: string[];

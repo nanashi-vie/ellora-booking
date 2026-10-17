@@ -2,6 +2,8 @@ package com.bookingnailms.dto.salon;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.AssertTrue;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -35,4 +37,21 @@ public class SalonRequest {
     @Email(message = "Email không hợp lệ")
     @jakarta.validation.constraints.Size(max=255)
     private String email;
+
+    private Double latitude;
+
+    private Double longitude;
+
+    public SalonRequest(String name, String description, String address, String city, String district,
+            String phone, String email) {
+        this(name, description, address, city, district, phone, email, null, null);
+    }
+
+    @JsonIgnore
+    @AssertTrue(message = "Vui lòng chọn đủ vĩ độ và kinh độ hợp lệ.")
+    public boolean isCoordinatesValid() {
+        if (latitude == null && longitude == null) return true;
+        return latitude != null && longitude != null && Double.isFinite(latitude) && Double.isFinite(longitude)
+                && latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180;
+    }
 }

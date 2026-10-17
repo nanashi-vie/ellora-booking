@@ -1,3 +1,5 @@
+@import 'leaflet/dist/leaflet.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -48,6 +50,25 @@
 
 html {
   scroll-behavior: smooth;
+}
+
+html:has(app-admin-layout) {
+  scrollbar-gutter: stable;
+}
+
+.salon-location-pin span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: #8c3a5a;
+  color: #f7bcd5;
+  border: 2px solid white;
+  box-shadow: 0 2px 5px #302c2d55;
+  font-size: 20px;
 }
 
 @media (prefers-reduced-motion: reduce) {

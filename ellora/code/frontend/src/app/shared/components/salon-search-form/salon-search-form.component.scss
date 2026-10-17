@@ -1,0 +1,22 @@
+:host { display: block; min-width: 0; width: 100%; }
+.salon-search-form { padding: 20px; border: 1px solid #ead7e0; border-radius: 16px; background: white; color: #382c32; text-align: left; box-shadow: 0 8px 28px #8c3a5a0d; }
+.salon-search-form--compact { padding: 0; border: 0; box-shadow: none; }
+.salon-search-fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+label { display: flex; min-width: 0; flex-direction: column; gap: 7px; font-size: 12px; font-weight: 600; color: #63505a; }
+input, select { box-sizing: border-box; min-width: 0; width: 100%; min-height: 44px; border: 1px solid #dfd2d9; border-radius: 9px; padding: 10px 11px; background: #fff; color: #382c32; font: inherit; font-size: 14px; font-weight: 400; }
+input::placeholder { color: #7a6972; }
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid #8c3a5a; outline-offset: 3px; }
+.salon-search-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; margin-top: 16px; }
+.salon-search-nearby { display: flex; flex: 1 1 300px; flex-wrap: wrap; align-items: center; gap: 10px; min-width: 0; }
+button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 42px; padding: 9px 13px; border: 1px solid #e1c6d2; border-radius: 9px; background: #fff; color: #71334e; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+button:disabled { opacity: .6; cursor: wait; }
+.salon-search-submit { min-width: 112px; background: #f7bcd5; border-color: #f1a6c4; color: #482134; font-size: 14px; }
+.salon-search-submit:hover:enabled { background: #f3accb; }
+.salon-search-position-status { color: #63505a; font-size: 12px; }
+.salon-search-radius { flex-direction: row; align-items: center; gap: 8px; }
+.salon-search-radius select { width: 88px; min-height: 40px; padding: 8px; }
+.salon-search-clear-position { min-height: 36px; padding: 6px 8px; border: 0; text-decoration: underline; text-underline-offset: 3px; }
+.salon-search-help { margin: 12px 0 0; color: #75636c; font-size: 12px; line-height: 1.5; }
+.salon-search-error { margin: 10px 0 0; color: #a02740; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+@media(max-width: 720px) { .salon-search-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media(max-width: 420px) { .salon-search-form { padding: 16px; } .salon-search-form--compact { padding: 0; } .salon-search-fields > label:nth-child(-n + 2) { grid-column: 1 / -1; } input, select { font-size: 16px; } .salon-search-submit { width: 100%; } }

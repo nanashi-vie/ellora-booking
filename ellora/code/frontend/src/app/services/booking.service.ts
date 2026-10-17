@@ -1,12 +1,15 @@
 import { isPlatformBrowser } from '@angular/common';
 import { Injectable, computed, inject, signal, PLATFORM_ID, OnDestroy } from '@angular/core';
-import { BookingApiService, BookingItem } from './booking-api.service';
+import { BookingApiService, BookingItem, CompletionConfirmation } from './booking-api.service';
 import { OwnerApiService, ownerError } from './owner-api.service';
 
 export interface BookingEvent {
   id: number;
   staffId: number;
   customerName: string;
+  customerPhone?: string | null;
+  completionConfirmation?: CompletionConfirmation | null;
+  completionAdminNote?: string | null;
   serviceName: string;
   date: string;
   startTime: number;
@@ -21,6 +24,7 @@ export class BookingService implements OnDestroy {
   private readonly api = inject(BookingApiService);
   private readonly owner = inject(OwnerApiService);
   bookings = signal<BookingEvent[]>([]);
+  readonly salonName = signal('');
   focusedBookingId = signal<number | null>(null);
   pendingBookings = computed(() => this.bookings().filter(item => item.status === 'pending'));
   pendingCount = signal(0);
@@ -35,6 +39,9 @@ export class BookingService implements OnDestroy {
       inProgress: item.status === 'IN_PROGRESS',
       staffId: item.employeeId ?? 0,
       customerName: item.customerName || 'Khách hàng',
+      customerPhone: item.customerPhone?.trim() || null,
+      completionConfirmation: item.completionConfirmation,
+      completionAdminNote: item.completionAdminNote,
       serviceName: item.serviceName,
       date: item.scheduledAt.slice(0, 10),
       startTime: time[0] + time[1] / 60,
@@ -118,6 +125,7 @@ export class BookingService implements OnDestroy {
     this.isLoading.set(false);
     this.updatingBookings.set(new Set());
     this.bookings.set([]); this.pendingCount.set(0); this.focusedBookingId.set(null);
+    this.salonName.set('');
     this.salonId = undefined; this.seen.clear(); this.error.set(''); this.soundError.set('');
     clearInterval(this.poll);
     this.poll = undefined;
@@ -137,6 +145,7 @@ export class BookingService implements OnDestroy {
     try {
       const salon = await this.owner.salon();
       if (this.disposed || generation !== this.generation) return;
+      this.salonName.set(salon.name);
       if (this.salonId !== salon.id) {
         this.stopRinging(); this.salonId = salon.id;
         try { this.seen = new Set(JSON.parse(sessionStorage.getItem('ellora-booking-alerts-' + salon.id) || '[]')); } catch { this.seen = new Set(); }
@@ -160,6 +169,12 @@ export class BookingService implements OnDestroy {
   }
 
   async acceptBooking(id: number): Promise<boolean> { return this.update(id, 'CONFIRMED'); }
+
+  addCreatedBooking(item: BookingItem): void {
+    if (this.disposed) return;
+    this.bookings.update(rows => [this.map(item), ...rows.filter(row => row.id !== item.id)]);
+    this.pendingCount.set(this.pendingBookings().length);
+  }
   async rejectBooking(id: number): Promise<boolean> { return this.update(id, 'REJECTED'); }
 
   async startBooking(id: number): Promise<boolean> { return this.update(id, 'IN_PROGRESS'); }

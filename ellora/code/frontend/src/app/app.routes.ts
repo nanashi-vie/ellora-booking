@@ -1,10 +1,28 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './guards/auth.guard';
-import { roleGuard } from './guards/role.guard';
+import { nonOwnerGuard, roleGuard } from './guards/role.guard';
 
 export const routes: Routes = [
   {
+    path: 'admin',
+    canActivate: [roleGuard],
+    canActivateChild: [roleGuard],
+    data: { role: 'ADMIN' },
+    loadComponent: () => import('./layouts/admin-layout/admin-layout.component').then(m => m.AdminLayout),
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+      { path: 'dashboard', loadComponent: () => import('./features/admin-dashboard/admin-dashboard.component').then(m => m.AdminDashboardComponent) },
+      { path: 'users', loadComponent: () => import('./features/admin-users/admin-users.component').then(m => m.AdminUsersComponent) },
+      { path: 'content', loadComponent: () => import('./features/admin-content/admin-content.component').then(m => m.AdminContentComponent) },
+      { path: 'billing', loadComponent: () => import('./features/admin-content/billing.component').then(m => m.AdminBillingComponent) },
+      { path: 'approvals', loadComponent: () => import('./features/admin-approvals/admin-approvals.component').then(m => m.AdminApprovalsComponent) },
+      { path: 'salon-changes', loadComponent: () => import('./features/admin-approvals/salon-changes.component').then(m => m.SalonChangesComponent) },
+      { path: 'booking-disputes', loadComponent: () => import('./features/admin-booking-disputes/admin-booking-disputes.component').then(m => m.AdminBookingDisputesComponent) }
+    ]
+  },
+  {
     path: '',
+    canActivateChild: [nonOwnerGuard],
     loadComponent: () => import('./layouts/main-layout/main-layout.component').then(m => m.MainLayout),
     children: [
       {
@@ -25,7 +43,7 @@ export const routes: Routes = [
       },
       {
         path: 'booking',
-        canActivate: [authGuard],
+        data: { customerOnly: true },
         loadComponent: () => import('./features/booking/booking.component').then(m => m.BookingComponent)
       },
       {
@@ -54,30 +72,9 @@ export const routes: Routes = [
       },
       {
         path: 'business-registration',
+        data: { customerOnly: true },
         canActivate: [authGuard],
         loadComponent: () => import('./features/business-registration/business-registration.component').then(m => m.BusinessRegistrationComponent)
-      },
-      {
-        path: 'admin/dashboard', canActivate: [roleGuard], data: { role: 'ADMIN' },
-        loadComponent: () => import('./features/admin-dashboard/admin-dashboard.component').then(m => m.AdminDashboardComponent)
-      },
-      {
-        path: 'admin/users', canActivate: [roleGuard], data: { role: 'ADMIN' },
-        loadComponent: () => import('./features/admin-users/admin-users.component').then(m => m.AdminUsersComponent)
-      },
-      {
-        path: 'admin/content', canActivate: [roleGuard], data: { role: 'ADMIN' },
-        loadComponent: () => import('./features/admin-content/admin-content.component').then(m => m.AdminContentComponent)
-      },
-      {
-        path: 'admin/billing', canActivate: [roleGuard], data: { role: 'ADMIN' },
-        loadComponent: () => import('./features/admin-content/billing.component').then(m => m.AdminBillingComponent)
-      },
-      {
-        path: 'admin/approvals',
-        canActivate: [roleGuard],
-        data: { role: 'ADMIN' },
-        loadComponent: () => import('./features/admin-approvals/admin-approvals.component').then(m => m.AdminApprovalsComponent)
       },
     ]
   },
@@ -125,16 +122,19 @@ export const routes: Routes = [
   },
   {
     path: 'login',
+    canActivate: [nonOwnerGuard],
     loadComponent: () =>
       import('./features/auth/login/login.component').then((m) => m.LoginComponent),
   },
   {
     path: 'register',
+    canActivate: [nonOwnerGuard],
     loadComponent: () =>
       import('./features/auth/register/register.component').then((m) => m.RegisterComponent),
   },
   {
     path: 'forgot-password',
+    canActivate: [nonOwnerGuard],
     loadComponent: () =>
       import('./features/auth/forgot-password/forgot-password.component').then(
         (m) => m.ForgotPasswordComponent,

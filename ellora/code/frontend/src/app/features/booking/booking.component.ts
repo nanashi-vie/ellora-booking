@@ -2,8 +2,10 @@ import { Component, inject, signal, computed, OnDestroy, OnInit } from '@angular
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { SalonApiService } from '../../services/salon-api.service';
-import { BookingApiService } from '../../services/booking-api.service';
+import { CdkTrapFocus } from '@angular/cdk/a11y';
+import { SalonApiService, SalonWorkingHour } from '../../services/salon-api.service';
+import { HttpErrorResponse } from '@angular/common/http';
+import { BookingApiService, GuestBookingReceipt } from '../../services/booking-api.service';
 import { Salon, Service, Staff } from '../../models/ellora.model';
 import { AuthService } from '../../services/auth.service';
 
@@ -17,7 +19,7 @@ interface CalendarDay {
 @Component({
   selector: 'app-booking',
   standalone: true,
-  imports: [CommonModule, RouterModule, ReactiveFormsModule],
+  imports: [CommonModule, RouterModule, ReactiveFormsModule, CdkTrapFocus],
   templateUrl: './booking.component.html',
   styleUrl: './booking.component.scss'
 })
@@ -35,6 +37,29 @@ export class BookingComponent implements OnInit, OnDestroy {
   staffList = signal<Staff[]>([]);
   error = signal('');
   saving = signal(false);
+  readonly workingHours = signal<SalonWorkingHour[]>([]);
+  readonly closedDates = signal<string[]>([]);
+  readonly closuresLoading = signal(false);
+  readonly closuresError = signal('');
+  private closureRequest = 0;
+  private destroyed = false;
+  readonly authReady = signal(false);
+  readonly guestMode = signal(false);
+  readonly profileEmail = signal('');
+  readonly guestReceipt = signal<GuestBookingReceipt | null>(null);
+  readonly guestEmail = signal('');
+  readonly guestReceiptSchedule = computed(() => {
+    const value = this.guestReceipt()?.scheduledAt;
+    return value ? `${value.slice(11, 16)} • ${value.slice(8, 10)}/${value.slice(5, 7)}/${value.slice(0, 4)}` : '';
+  });
+  private readonly bookingNow = signal(Date.now());
+  readonly earliestBooking = computed(() => {
+    const instant = new Date(Math.ceil((this.bookingNow() + 60 * 60 * 1000) / 60000) * 60000);
+    const parts = new Intl.DateTimeFormat('en', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit',
+      day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(instant);
+    const part = (name: string) => parts.find(item => item.type === name)!.value;
+    return { date: `${part('year')}-${part('month')}-${part('day')}`, time: `${part('hour')}:${part('minute')}` };
+  });
 
   // Wizard state: 1=Dịch vụ, 2=Thợ nail, 3=Thời gian, 4=Xác nhận
   currentStep = signal<1 | 2 | 3 | 4>(1);
@@ -46,8 +71,8 @@ export class BookingComponent implements OnInit, OnDestroy {
   selectedStaffId = signal<string | null>(null);
 
   // Step 3: Date/Time
-  calendarYear = signal(new Date().getFullYear());
-  calendarMonth = signal(new Date().getMonth()); // 0-indexed
+  calendarYear = signal(Number(this.earliestBooking().date.slice(0, 4)));
+  calendarMonth = signal(Number(this.earliestBooking().date.slice(5, 7)) - 1); // 0-indexed
   selectedDate = signal<string | null>(null);
   selectedTime = signal<string | null>(null);
 
@@ -58,32 +83,57 @@ export class BookingComponent implements OnInit, OnDestroy {
 
   // Step 4: Form
   customerForm = this.fb.nonNullable.group({
-    fullName: ['', Validators.required],
-    phone: ['', Validators.required],
-    notes: ['']
+    fullName: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(255)]],
+    phone: ['', [Validators.required, Validators.pattern(/^[+0-9 ()-]{8,20}$/), Validators.pattern(/\d/)]],
+    email: ['', [Validators.email, Validators.maxLength(254)]],
+    notes: ['', Validators.maxLength(1000)]
   });
 
   async ngOnInit() {
+    this.refreshBookingTime();
     const salonId = this.route.snapshot.queryParamMap.get('salonId');
     if (!salonId) {
       this.error.set('Vui lòng chọn salon trước khi đặt lịch.');
       return;
     }
+    const identity = this.loadBookingIdentity();
     try {
-      const [salon, services, staff] = await Promise.all([
-        this.salonApi.detail(salonId), this.salonApi.services(salonId), this.salonApi.employees(salonId)
+      const [salon, services, staff, hours] = await Promise.all([
+        this.salonApi.detail(salonId), this.salonApi.services(salonId), this.salonApi.employees(salonId), this.salonApi.workingHours(salonId)
       ]);
+      if (this.destroyed) return;
       this.salon.set(salon); this.services.set(services); this.staffList.set(staff);
+      this.workingHours.set(hours);
+      void this.loadClosedDates();
       const serviceId = this.route.snapshot.queryParamMap.get('serviceId');
       if (serviceId && services.some(service => service.id === serviceId)) this.selectedServiceIds.set([serviceId]);
-    } catch { this.error.set('Không tải được thông tin salon. Vui lòng thử lại.'); }
+    } catch { if (!this.destroyed) this.error.set('Không tải được thông tin salon. Vui lòng thử lại.'); }
+    await identity;
+  }
+
+  private async loadBookingIdentity(): Promise<void> {
+    let authenticated: boolean;
+    try { authenticated = await this.authService.isAuthenticated(); }
+    catch {
+      if (!this.destroyed) this.error.set('Không kiểm tra được phiên đăng nhập. Vui lòng tải lại trang.');
+      return;
+    }
+    if (this.destroyed) return;
+    this.guestMode.set(!authenticated);
+    if (!authenticated) {
+      this.customerForm.controls.email.setValidators([Validators.required, Validators.email, Validators.maxLength(254)]);
+      this.customerForm.controls.email.updateValueAndValidity();
+      this.authReady.set(true);
+      return;
+    }
     try {
       const profile = await this.authService.getUserProfile();
-      this.customerForm.patchValue({
-        fullName: profile.name || '',
-        phone: profile.phone_number || ''
-      });
-    } catch { /* Profile details are optional for the booking form. */ }
+      if (this.destroyed) return;
+      this.profileEmail.set(profile.email || '');
+      if (!this.customerForm.controls.fullName.dirty && !this.customerForm.controls.fullName.value) this.customerForm.controls.fullName.setValue(profile.name || '');
+      if (!this.customerForm.controls.phone.dirty && !this.customerForm.controls.phone.value) this.customerForm.controls.phone.setValue(profile.phone_number || '');
+    } catch { /* Signed-in customers can enter missing contact details themselves. */ }
+    finally { if (!this.destroyed) this.authReady.set(true); }
   }
 
   // ─── Computed ───────────────────────────────────────
@@ -108,8 +158,7 @@ export class BookingComponent implements OnInit, OnDestroy {
   calendarDays = computed<CalendarDay[]>(() => {
     const year = this.calendarYear();
     const month = this.calendarMonth();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const earliestDate = this.earliestBooking().date;
 
     const firstDay = new Date(year, month, 1);
     // Mon=0 … Sun=6 offset
@@ -122,26 +171,70 @@ export class BookingComponent implements OnInit, OnDestroy {
     // Prev month filler
     for (let i = startOffset - 1; i >= 0; i--) {
       const d = new Date(year, month - 1, daysInPrevMonth - i);
-      days.push({ date: daysInPrevMonth - i, fullDate: this.toISODate(d), isCurrentMonth: false, isPast: d < today });
+      days.push({ date: daysInPrevMonth - i, fullDate: this.toISODate(d), isCurrentMonth: false, isPast: this.toISODate(d) < earliestDate });
     }
     // Current month
     for (let i = 1; i <= daysInMonth; i++) {
       const d = new Date(year, month, i);
-      days.push({ date: i, fullDate: this.toISODate(d), isCurrentMonth: true, isPast: d < today });
+      days.push({ date: i, fullDate: this.toISODate(d), isCurrentMonth: true, isPast: this.toISODate(d) < earliestDate });
     }
     // Next month filler to complete last row
     const remaining = 7 - (days.length % 7);
     if (remaining < 7) {
       for (let i = 1; i <= remaining; i++) {
         const d = new Date(year, month + 1, i);
-        days.push({ date: i, fullDate: this.toISODate(d), isCurrentMonth: false, isPast: false });
+        days.push({ date: i, fullDate: this.toISODate(d), isCurrentMonth: false, isPast: this.toISODate(d) < earliestDate });
       }
     }
     return days;
   });
 
-  morningSlots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30'];
-  afternoonSlots = ['13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30'];
+  isClosed(date: string): boolean {
+    const weekday = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'][new Date(date + 'T00:00:00Z').getUTCDay()];
+    return this.closedDates().includes(date) || !this.workingHours().some(row => row.dayOfWeek === weekday && !row.closed);
+  }
+
+  readonly timeRange = computed(() => {
+    const date = this.selectedDate();
+    const earliest = this.earliestBooking();
+    if (!date || date < earliest.date || this.isClosed(date) || this.closuresLoading() || this.closuresError()) return null;
+    const weekday = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'][new Date(date + 'T00:00:00Z').getUTCDay()];
+    const hours = this.workingHours().find(row => row.dayOfWeek === weekday);
+    if (!hours?.openTime || !hours.closeTime) return null;
+    const duration = this.selectedServices().reduce((total, service) => total + service.durationMinutes, 0);
+    if (duration <= 0) return null;
+    const min = Math.max(this.minutes(hours.openTime), date === earliest.date ? this.minutes(earliest.time) : 0);
+    const max = this.minutes(hours.closeTime) - duration;
+    return min <= max ? { min: this.formatMinutes(min), max: this.formatMinutes(max) } : null;
+  });
+  readonly selectedTimeValid = computed(() => {
+    const time = this.selectedTime(); const range = this.timeRange();
+    return !!time && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time) && !!range && time >= range.min && time <= range.max;
+  });
+  readonly availableSlots = computed(() => {
+    const range = this.timeRange();
+    if (!range) return [];
+    const slots: string[] = [];
+    for (let time = Math.ceil(this.minutes(range.min) / 30) * 30; time <= this.minutes(range.max); time += 30) slots.push(this.formatMinutes(time));
+    return slots;
+  });
+  readonly morningSlots = computed(() => this.availableSlots().filter(time => time < '12:00'));
+  readonly afternoonSlots = computed(() => this.availableSlots().filter(time => time >= '12:00'));
+
+  async loadClosedDates(): Promise<void> {
+    const salon = this.salon();
+    if (!salon) return;
+    const request = ++this.closureRequest;
+    const days = this.calendarDays();
+    this.closuresLoading.set(true); this.closuresError.set('');
+    try {
+      const dates = await this.salonApi.closedDates(salon.id, days[0].fullDate, days[days.length - 1].fullDate);
+      if (request !== this.closureRequest) return;
+      this.closedDates.set(dates);
+      if (this.selectedDate() && this.isClosed(this.selectedDate()!)) { this.selectedDate.set(null); this.selectedTime.set(null); }
+    } catch { if (request === this.closureRequest) this.closuresError.set('Không tải được ngày nghỉ của tiệm. Vui lòng thử lại.'); }
+    finally { if (request === this.closureRequest) this.closuresLoading.set(false); }
+  }
 
   selectedDateLabel = computed(() => {
     if (!this.selectedDate()) return '';
@@ -155,6 +248,16 @@ export class BookingComponent implements OnInit, OnDestroy {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
+  private minutes(time: string): number { return Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5)); }
+  private formatMinutes(time: number): string { return `${String(Math.floor(time / 60)).padStart(2, '0')}:${String(time % 60).padStart(2, '0')}`; }
+  refreshBookingTime(): void { this.bookingNow.set(Date.now()); }
+  selectDate(date: string): void {
+    this.refreshBookingTime();
+    if (date < this.earliestBooking().date || this.isClosed(date)) return;
+    this.selectedDate.set(date); this.selectedTime.set(null); this.error.set('');
+  }
+  selectTime(time: string): void { this.refreshBookingTime(); this.selectedTime.set(time); this.error.set(''); }
+
   formatPrice(p: number): string {
     return p.toLocaleString('vi-VN') + 'đ';
   }
@@ -163,31 +266,38 @@ export class BookingComponent implements OnInit, OnDestroy {
 
   toggleService(id: string) {
     this.selectedServiceIds.update(ids => ids.includes(id) ? [] : [id]);
+    this.selectedTime.set(null);
   }
 
   prevMonth() {
+    this.selectedDate.set(null); this.selectedTime.set(null);
     if (this.calendarMonth() === 0) {
       this.calendarMonth.set(11);
       this.calendarYear.update(y => y - 1);
     } else {
       this.calendarMonth.update(m => m - 1);
     }
+    void this.loadClosedDates();
   }
 
   nextMonth() {
+    this.selectedDate.set(null); this.selectedTime.set(null);
     if (this.calendarMonth() === 11) {
       this.calendarMonth.set(0);
       this.calendarYear.update(y => y + 1);
     } else {
       this.calendarMonth.update(m => m + 1);
     }
+    void this.loadClosedDates();
   }
 
   nextStep() {
+    this.refreshBookingTime();
     const step = this.currentStep();
     if (step === 1 && this.selectedServiceIds().length > 0) this.currentStep.set(2);
     else if (step === 2 && this.selectedStaffId()) this.currentStep.set(3);
-    else if (step === 3 && this.selectedDate() && this.selectedTime()) this.currentStep.set(4);
+    else if (step === 3 && this.selectedTimeValid()) this.currentStep.set(4);
+    else if (step === 3) this.error.set('Chọn giờ hẹn cách hiện tại ít nhất 1 tiếng và nằm trong giờ mở cửa.');
   }
 
   prevStep() {
@@ -203,27 +313,43 @@ export class BookingComponent implements OnInit, OnDestroy {
 
 
   async confirmBooking() {
+    if (!this.authReady() || this.saving() || this.destroyed || this.showSuccessPopup() || this.guestReceipt()) return;
+    this.refreshBookingTime();
+    if (this.guestMode()) this.customerForm.controls.email.setValue(this.customerForm.controls.email.value.trim(), { emitEvent: false });
     this.customerForm.markAllAsTouched();
-    if (this.customerForm.invalid) { this.error.set('Vui lòng nhập họ tên và số điện thoại.'); return; }
+    if (this.customerForm.invalid) { this.error.set(this.guestMode() ? 'Vui lòng nhập họ tên, số điện thoại hợp lệ và email nhận thông tin lịch hẹn.' : 'Vui lòng nhập họ tên và số điện thoại hợp lệ.'); return; }
     if (!this.salon() || !this.selectedServiceIds()[0] || !this.selectedDate() || !this.selectedTime() || this.saving()) return;
+    if (!this.selectedTimeValid()) { this.error.set('Vui lòng chọn lại giờ hẹn, cách hiện tại ít nhất 1 tiếng và đủ thời lượng dịch vụ trước giờ đóng cửa.'); return; }
     this.saving.set(true); this.error.set('');
     try {
-      await this.bookingApi.createBooking({
+      const request = {
         salonId: Number(this.salon()!.id),
         serviceId: Number(this.selectedServiceIds()[0]),
         employeeId: this.selectedStaffId() && this.selectedStaffId() !== 'any' ? Number(this.selectedStaffId()) : undefined,
         scheduledAt: `${this.selectedDate()}T${this.selectedTime()}:00`,
         customerNote: this.customerForm.controls.notes.value,
-      });
-    } catch {
-      this.error.set('Không đặt được lịch. Vui lòng kiểm tra thời gian và thử lại.');
+      };
+      if (this.guestMode()) {
+        const email = this.customerForm.controls.email.value.trim();
+        const receipt = await this.bookingApi.createGuestBooking({ ...request, fullName: this.customerForm.controls.fullName.value.trim(),
+          phone: this.customerForm.controls.phone.value.trim(), email });
+        if (this.destroyed) return;
+        this.guestReceipt.set(receipt); this.guestEmail.set(email);
+      } else await this.bookingApi.createBooking({ ...request, customerPhone: this.customerForm.controls.phone.value.trim() });
+    } catch (error) {
+      if (this.destroyed) return;
+      this.error.set(error instanceof HttpErrorResponse && error.status === 429
+        ? 'Bạn đã gửi nhiều yêu cầu đặt lịch. Vui lòng thử lại sau ít phút.'
+        : error instanceof HttpErrorResponse && [400, 409].includes(error.status) && typeof error.error?.message === 'string'
+          ? error.error.message : 'Không đặt được lịch. Vui lòng kiểm tra thời gian và thử lại.');
       this.saving.set(false);
       return;
     }
+    if (this.destroyed) return;
     this.saving.set(false);
     this.showSuccessPopup.set(true);
     this.countdown.set(30);
-    this.startCountdown();
+    if (!this.guestMode()) this.startCountdown();
   }
 
   startCountdown() {
@@ -238,10 +364,12 @@ export class BookingComponent implements OnInit, OnDestroy {
   closeSuccessPopupAndRedirect() {
     if (this.countdownTimer) clearInterval(this.countdownTimer);
     this.showSuccessPopup.set(false);
-    this.router.navigate(['/setting/my-bookings']);
+    this.router.navigate(this.guestReceipt() ? ['/salon', this.salon()!.id] : ['/setting/my-bookings']);
   }
 
   ngOnDestroy() {
+    this.destroyed = true;
+    this.closureRequest++;
     if (this.countdownTimer) clearInterval(this.countdownTimer);
   }
 

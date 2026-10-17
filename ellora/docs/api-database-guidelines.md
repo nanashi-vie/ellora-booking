@@ -28,9 +28,16 @@ DELETE /api/services/{id}
 
 # Bookings
 POST /api/bookings                     # Tạo booking mới (mặc định trạng thái PENDING)
+POST /api/bookings/guest               # Khách không đăng nhập; nhận biên nhận tối giản, không mở API đọc/sửa công khai
 GET /api/bookings/my                   # Lấy danh sách booking của khách hàng hiện tại
 GET /api/salon/bookings                # Lấy danh sách booking của salon (cho salon owner)
 PATCH /api/bookings/{id}/status        # Cập nhật trạng thái booking (PENDING -> CONFIRMED, CANCELLED, v.v.)
+
+# Completion confirmation (customer) and disputed completion (admin)
+POST /api/bookings/{id}/completion-response       # {completed, completionVersion, reason?}; chỉ khách của lịch
+GET /api/admin/booking-disputes                  # Phân trang; lọc status OPEN/UPHELD/REOPENED
+GET /api/admin/booking-disputes/{id}             # Lịch hẹn, phản ánh và liên hệ hai bên; chỉ admin
+PATCH /api/admin/booking-disputes/{id}/resolution # {outcome: UPHELD|REOPENED, note}; ghi nhận admin xử lý
 
 # Reviews
 POST /api/reviews                      # Tạo review mới cho salon sau khi booking COMPLETED
@@ -38,8 +45,15 @@ GET /api/salons/{salonId}/reviews      # Lấy danh sách review của salon
 ```
 
 ### 1.2. Nguyên tắc thiết kế API
+
+Tìm salon công khai dùng `GET /api/customer/salons` với `keyword`, `location`, `date`, `time`, `latitude`, `longitude`, `radiusKm`, `sort`, `page`, `size` tùy chọn. Từ khóa khớp tên tiệm hoặc dịch vụ đang hoạt động (giữ khớp city/district cũ); địa điểm khớp địa chỉ/quận/thành phố, có chuẩn hóa Unicode. Ngày/giờ chỉ lọc **giờ mở cửa**, có áp dụng ngày nghỉ và mốc online trước ít nhất một giờ theo giờ Việt Nam; không khẳng định còn lịch trống. `sort` nhận `newest`, `rating`, `distance`; khoảng cách/bán kính được lọc, đếm và sắp xếp trong database trước khi phân trang. Summary thêm vị trí đã duyệt và `distanceKm` tùy chọn; không bịa `(0,0)` cho tiệm chưa có ghim. Chi tiết kiểm tra đầu vào, giờ mặc định và phân trang: `decisions/2026-10-18-public-search-nearby.md`.
+
+Định vị chỉ xin khi khách chủ động bấm. Tọa độ thiết bị nằm trong bộ nhớ phiên, không ghi vào đường dẫn frontend hay storage. Truy vấn GET đến API bên thứ nhất có cặp tọa độ; không ghi log ứng dụng hoặc transfer-cache kết quả định vị vào SSR HTML. Bản đồ hiển thị ghim thật của trang kết quả hiện tại, có ghi nguồn OpenStreetMap.
+
+Guest tự đặt dùng `{salonId,serviceId,employeeId?,scheduledAt,fullName,phone,email,customerNote?}`; họ tên, SĐT, email hợp lệ và ngày giờ bắt buộc. Trả `{id,status,scheduledAt,salonName,serviceName}`. Giữ quy tắc online trước ít nhất 1 giờ theo giờ Việt Nam; không tạo hoặc liên kết profile theo email. Đúng `POST /bookings/guest` cho anonymous/CUSTOMER; owner/admin có token bị chặn. Giới hạn mỗi email 5 yêu cầu/10 phút trên từng backend instance; mọi endpoint lịch sử, hủy, đánh giá và phản hồi hoàn thành vẫn yêu cầu tài khoản/quyền sở hữu.
 - Giữ tên endpoint nhất quán. Dùng danh từ số nhiều khi phù hợp.
 - Dùng request DTO và response DTO.
+- Hồ sơ salon nhận thêm cặp `latitude` / `longitude` tùy chọn, phải hữu hạn và nằm trong [-90,90] / [-180,180]. `PUT /api/owner/salon` gửi đề xuất chờ admin duyệt, kể cả khi chỉ thay đổi tọa độ; không cập nhật vị trí công khai ngay. Bỏ qua hoặc gửi null cả cặp giữ vị trí đã lưu, và yêu cầu JSON cũ không có tọa độ không xóa vị trí khi duyệt.
 - Validate các field bắt buộc bằng các annotation javax/jakarta validation.
 - Trả lỗi có ý nghĩa, sử dụng `GlobalExceptionHandler`.
 - Không tự tạo endpoint mới nếu task không yêu cầu.

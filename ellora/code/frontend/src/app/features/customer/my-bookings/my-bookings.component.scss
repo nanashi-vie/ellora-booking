@@ -1,0 +1,12 @@
+.completion-panel { padding: 16px; border: 1px solid #f1dbe4; border-radius: 10px; background: #fffafb; font-size: 14px; color: #5f4b54; }
+.completion-panel p + p { margin-top: 6px; }
+.completion-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.completion-actions button { padding: 9px 14px; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; }
+.confirm-service { background: #8c3a5a; color: white; border: 1px solid #8c3a5a; }
+.report-service { border: 1px solid #d9bdc9; background: white; color: #8c3a5a; }
+.completion-actions button:disabled { opacity: .5; cursor: wait; }
+.completion-actions button:focus-visible, .completion-form textarea:focus-visible { outline: 2px solid #8c3a5a; outline-offset: 2px; }
+.completion-form { margin-top: 16px; }
+.completion-form label { display: block; margin-bottom: 6px; font-weight: 600; }
+.completion-form textarea { display: block; width: 100%; padding: 10px; border: 1px solid #d9bdc9; border-radius: 6px; background: white; margin-bottom: 6px; }
+.completion-note { white-space: pre-wrap; overflow-wrap: anywhere; }

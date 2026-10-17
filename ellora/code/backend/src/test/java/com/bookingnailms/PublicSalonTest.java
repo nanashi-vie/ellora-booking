@@ -1,6 +1,7 @@
 package com.bookingnailms;
 import com.bookingnailms.controller.salon.PublicSalonController;
 import com.bookingnailms.dto.salon.SalonResponse;
+import com.bookingnailms.dto.salon.SalonSummaryResponse;
 import com.bookingnailms.entity.*;
 import com.bookingnailms.enums.SalonStatus;
 import com.bookingnailms.exception.ResourceNotFoundException;
@@ -14,10 +15,10 @@ import static org.mockito.Mockito.*;
 class PublicSalonTest {
  @Test void listQueriesOnlyApprovedSalonsAndMapsDatabaseIds() {
   var repo=mock(SalonRepository.class);var service=new SalonService(repo,mock(UserRepository.class));
-  var page=PageRequest.of(0,12);var salon=Salon.builder().id(42L).name("Salon thật").status(SalonStatus.ACTIVE).build();
-  when(repo.findByStatus(SalonStatus.ACTIVE,page)).thenReturn(new PageImpl<>(List.of(salon)));
+  var page=PageRequest.of(0,12);var salon=SalonSummaryResponse.builder().id(42L).name("Salon thật").build();
+  when(repo.searchPublic(any(),any(),eq(page))).thenReturn(new PageImpl<>(List.of(salon)));
   assertEquals(42L,service.searchSalons("",page).getContent().get(0).getId());
-  when(repo.searchActive("Hồ Chí Minh",page)).thenReturn(Page.empty(page));
+  when(repo.searchPublic(argThat(filters -> filters.keyword().equals("Hồ Chí Minh")),any(),eq(page))).thenReturn(Page.empty(page));
   assertTrue(service.searchSalons(" Hồ Chí Minh ",page).getContent().isEmpty());
  }
  @Test void unpublishedSalonCannotExposeDetailsServicesEmployeesOrReviews() {

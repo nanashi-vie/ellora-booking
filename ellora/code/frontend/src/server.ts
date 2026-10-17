@@ -34,7 +34,7 @@ const contentSecurityPolicy = [
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
-  "img-src 'self' data: blob: https://res.cloudinary.com https://picsum.photos https://i.pravatar.cc",
+  "img-src 'self' data: blob: https://res.cloudinary.com https://picsum.photos https://i.pravatar.cc https://tile.openstreetmap.org",
   `connect-src ${connectSources}`,
   ...(process.env['NODE_ENV'] === 'production' ? ['upgrade-insecure-requests'] : []),
 ].join('; ');
@@ -44,7 +44,7 @@ app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self), payment=()');
   if (process.env['NODE_ENV'] === 'production') {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   }

@@ -44,8 +44,8 @@ describe('Role routes', () => {
     expect(TestBed.inject(Router).serializeUrl(await check('ADMIN') as any)).toBe('/login');
   });
   it('chooses login destinations for all roles', () => {
-    expect(roleHome('ADMIN')).toBe('/profile/approvals');
-    expect(roleHome('SALON_OWNER')).toBe('/owner');
+    expect(roleHome('ADMIN')).toBe('/admin/dashboard');
+    expect(roleHome('SALON_OWNER')).toBe('/owner/dashboard');
     expect(roleHome('CUSTOMER')).toBe('/');
   });
   const customerPage = (url: string, callback=false) => TestBed.runInInjectionContext(() => nonOwnerGuard(
@@ -54,7 +54,7 @@ describe('Role routes', () => {
   it('redirects authenticated owners from customer pages and login to management', async () => {
     role='SALON_OWNER';
     for (const url of ['/','/search','/booking','/my-bookings','/profile','/login','/register']) {
-      expect(TestBed.inject(Router).serializeUrl(await customerPage(url) as any)).toBe('/owner');
+      expect(TestBed.inject(Router).serializeUrl(await customerPage(url) as any)).toBe('/owner/dashboard');
     }
   });
   it('allows customer browsing and signed-out login, and lets OAuth complete',async()=>{
@@ -65,34 +65,44 @@ describe('Role routes', () => {
   it('resolves /owner and redirects direct customer URLs without a navigation loop',async()=>{
     role='SALON_OWNER';TestBed.inject(Router).resetConfig(stubRoutes(routes));
     const harness=await RouterTestingHarness.create();
-    for(const url of ['/owner','/booking','/login','/profile','/admin/users']) {
+    for(const url of ['/owner','/','/search','/salon/1','/booking','/setting/my-bookings','/login','/register','/forgot-password','/admin/users']) {
       await harness.navigateByUrl(url);
       expect(TestBed.inject(Router).url).toBe('/owner/dashboard');
     }
-    await harness.navigateByUrl('/owner/account');expect(TestBed.inject(Router).url).toBe('/owner/account');
+    await harness.navigateByUrl('/owner/profile');expect(TestBed.inject(Router).url).toBe('/owner/profile');
   });
   it('blocks admins from booking and business registration while allowing customers',async()=>{
     TestBed.inject(Router).resetConfig(stubRoutes(routes));
     const harness=await RouterTestingHarness.create();
     role='ADMIN';
-    for(const url of ['/booking','/my-bookings','/business-registration']) {
-      await harness.navigateByUrl(url);expect(TestBed.inject(Router).url).toBe('/profile/approvals');
+    for(const url of ['/booking','/business-registration']) {
+      await harness.navigateByUrl(url);expect(TestBed.inject(Router).url).toBe('/admin/dashboard');
     }
     role='CUSTOMER';
     for(const url of ['/booking','/business-registration']) {
       await harness.navigateByUrl(url);expect(TestBed.inject(Router).url).toBe(url);
     }
   });
-  it('keeps old admin links inside the account workspace and protects every section',async()=>{
+  it('protects admin sections and allows administrators',async()=>{
     TestBed.inject(Router).resetConfig(stubRoutes(routes));
     const harness=await RouterTestingHarness.create();role='ADMIN';
     for(const section of ['users','approvals','content','billing']) {
       await harness.navigateByUrl('/admin/'+section);
-      expect(TestBed.inject(Router).url).toBe('/profile/'+section);
+      expect(TestBed.inject(Router).url).toBe('/admin/'+section);
     }
     role='CUSTOMER';
-    for(const section of ['users','approvals','content','billing']) {
-      await harness.navigateByUrl('/profile/'+section);expect(TestBed.inject(Router).url).toBe('/');
+    await harness.navigateByUrl('/admin/users');expect(TestBed.inject(Router).url).toBe('/');
+  });
+
+  it('allows anonymous booking while account history and business registration still require login', async () => {
+    authenticated = false;
+    TestBed.inject(Router).resetConfig(stubRoutes(routes));
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/booking?salonId=1&serviceId=2');
+    expect(TestBed.inject(Router).url).toBe('/booking?salonId=1&serviceId=2');
+    for (const url of ['/setting/my-bookings', '/business-registration']) {
+      await harness.navigateByUrl(url);
+      expect(TestBed.inject(Router).url).toBe('/login');
     }
   });
 });

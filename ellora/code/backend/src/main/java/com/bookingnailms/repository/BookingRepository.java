@@ -16,10 +16,22 @@ import java.util.UUID;
 
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, Long> {
+    @Query("select b from Booking b left join fetch b.customer c join fetch b.salon join fetch b.service " +
+            "where b.status = com.bookingnailms.enums.BookingStatus.CONFIRMED " +
+            "and (trim(c.email) <> '' or (c.id is null and trim(b.guestEmail) <> '')) " +
+            "and b.scheduledAt > :now and b.scheduledAt <= :until " +
+            "and not exists (select e.id from BookingEmail e where e.bookingId = b.id " +
+            "and e.kind = 'APPOINTMENT_REMINDER') order by b.scheduledAt, b.id")
+    List<Booking> findReminderCandidates(@Param("now") LocalDateTime now,
+            @Param("until") LocalDateTime until, Pageable pageable);
+
+    @Query("select b.salon.id from Booking b where b.id = :id")
+    java.util.Optional<Long> findSalonIdById(@Param("id") Long id);
+
     @Query("select count(distinct b.customer.id) from Booking b where b.status = :status")
     long countDistinctCustomersByStatus(@Param("status") BookingStatus status);
 
-    @Query(value = "select count(*) from (select customer_id from bookings where status = 'COMPLETED' " +
+    @Query(value = "select count(*) from (select customer_id from bookings where status = 'COMPLETED' and customer_id is not null " +
             "group by customer_id having count(*) >= 2) returning_customers", nativeQuery = true)
     long countReturningCustomers();
 
@@ -41,6 +53,11 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             nativeQuery = true)
     List<Booking> findOverlapping(@Param("salonId") Long salonId,
             @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select b from Booking b where b.salon.id = :salon and b.scheduledAt >= :from " +
+            "and b.status in ('PENDING', 'CONFIRMED') order by b.id")
+    List<Booking> findUpcomingForUpdate(@Param("salon") Long salonId, @Param("from") LocalDateTime from);
 
     interface RevenueBucket {
         LocalDateTime getBucketStart();

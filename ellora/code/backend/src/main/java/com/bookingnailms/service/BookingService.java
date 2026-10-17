@@ -3,6 +3,9 @@ package com.bookingnailms.service;
 import com.bookingnailms.dto.booking.BookingRequest;
 import com.bookingnailms.dto.booking.BookingResponse;
 import com.bookingnailms.dto.booking.BookingStatusUpdateRequest;
+import com.bookingnailms.dto.booking.WalkInBookingRequest;
+import com.bookingnailms.dto.booking.GuestBookingRequest;
+import com.bookingnailms.dto.booking.GuestBookingReceipt;
 import com.bookingnailms.dto.common.PageResponse;
 import com.bookingnailms.entity.Booking;
 import com.bookingnailms.entity.Employee;
@@ -10,6 +13,7 @@ import com.bookingnailms.entity.NailService;
 import com.bookingnailms.entity.Salon;
 import com.bookingnailms.entity.User;
 import com.bookingnailms.enums.BookingStatus;
+import com.bookingnailms.enums.CompletionConfirmation;
 import com.bookingnailms.exception.BadRequestException;
 import com.bookingnailms.exception.ResourceNotFoundException;
 import com.bookingnailms.exception.UnauthorizedException;
@@ -24,6 +28,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.UUID;
@@ -38,12 +45,21 @@ public class BookingService {
     private final UserRepository userRepository;
     private final BookingEmailService bookingEmails;
     private final SalonWorkingHourService workingHours;
+    private final Clock clock;
 
     @Autowired
     public BookingService(BookingRepository bookingRepository, SalonRepository salonRepository,
             NailServiceRepository nailServiceRepository, EmployeeRepository employeeRepository,
             UserRepository userRepository, BookingEmailService bookingEmails,
             SalonWorkingHourService workingHours) {
+        this(bookingRepository, salonRepository, nailServiceRepository, employeeRepository,
+                userRepository, bookingEmails, workingHours, Clock.systemUTC());
+    }
+
+    public BookingService(BookingRepository bookingRepository, SalonRepository salonRepository,
+            NailServiceRepository nailServiceRepository, EmployeeRepository employeeRepository,
+            UserRepository userRepository, BookingEmailService bookingEmails,
+            SalonWorkingHourService workingHours, Clock clock) {
         this.bookingRepository = bookingRepository;
         this.salonRepository = salonRepository;
         this.nailServiceRepository = nailServiceRepository;
@@ -51,6 +67,7 @@ public class BookingService {
         this.userRepository = userRepository;
         this.bookingEmails = bookingEmails;
         this.workingHours = workingHours;
+        this.clock = clock;
     }
 
     public BookingService(BookingRepository bookingRepository, SalonRepository salonRepository,
@@ -65,9 +82,39 @@ public class BookingService {
         User customer = userRepository.findById(customerId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", customerId));
 
+        String phone = request.getCustomerPhone();
+        if (phone == null || phone.isBlank()) phone = customer.getPhone();
+        return create(request, customer, null, phone == null ? null : phone.strip(), null, null);
+    }
+
+    @Transactional
+    public GuestBookingReceipt createGuestBooking(GuestBookingRequest request) {
+        var booking = new BookingRequest(request.salonId(), request.serviceId(), request.employeeId(),
+                request.scheduledAt(), request.customerNote());
+        var result = create(booking, null, request.fullName().strip(), request.phone().strip(), null, request.email().strip());
+        return new GuestBookingReceipt(result.getId(), result.getStatus(), result.getScheduledAt(),
+                result.getSalonName(), result.getServiceName());
+    }
+
+    @Transactional
+    public BookingResponse createWalkIn(WalkInBookingRequest request, UUID ownerId) {
+        var salon = salonRepository.findByOwnerId(ownerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Salon not found for current owner"));
+        var booking = new BookingRequest(salon.getId(), request.serviceId(), request.employeeId(),
+                request.scheduledAt(), request.customerNote());
+        String name = request.customerName() == null || request.customerName().isBlank()
+                ? "Khách vãng lai" : request.customerName().strip();
+        return create(booking, null, name, request.customerPhone() == null ? null : request.customerPhone().strip(), ownerId, null);
+    }
+
+    private BookingResponse create(BookingRequest request, User customer, String walkInName, String customerPhone, UUID ownerId, String guestEmail) {
+        boolean walkIn = ownerId != null;
         // ponytail: serialize booking creation per salon; use per-employee locks if contention grows.
         Salon salon = salonRepository.findForUpdateById(request.getSalonId())
                 .orElseThrow(() -> new ResourceNotFoundException("Salon", "id", request.getSalonId()));
+        if (ownerId != null && !salon.getOwner().getId().equals(ownerId)) {
+            throw new UnauthorizedException("You are not the owner of this salon");
+        }
         if (salon.getStatus() != com.bookingnailms.enums.SalonStatus.ACTIVE) {
             throw new BadRequestException("Salon is not accepting bookings");
         }
@@ -82,15 +129,21 @@ public class BookingService {
                 || nailService.getDurationMinutes() <= 0) {
             throw new BadRequestException("Thời gian hẹn hoặc thời lượng dịch vụ không hợp lệ.");
         }
-        if (request.getScheduledAt().getMinute() % 30 != 0 || request.getScheduledAt().getSecond() != 0
+        if ((walkIn && request.getScheduledAt().getMinute() % 30 != 0) || request.getScheduledAt().getSecond() != 0
                 || request.getScheduledAt().getNano() != 0) {
-            throw new BadRequestException("Giờ hẹn cần nằm trên mốc 30 phút.");
+            throw new BadRequestException(walkIn
+                    ? "Giờ hẹn cần nằm trên mốc 30 phút." : "Giờ hẹn cần chính xác đến phút.");
+        }
+        if (!walkIn && request.getScheduledAt().atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toInstant()
+                .isBefore(clock.instant().plus(1, ChronoUnit.HOURS))) {
+            throw new BadRequestException("Vui lòng đặt lịch trước giờ hẹn ít nhất 1 giờ.");
         }
         if (workingHours != null) {
-            var hours = workingHours.get(salon.getId(), request.getScheduledAt().getDayOfWeek());
-            var bookingEnd = request.getScheduledAt().toLocalTime().plusMinutes(nailService.getDurationMinutes());
+            var hours = workingHours.get(salon.getId(), request.getScheduledAt().toLocalDate());
+            var bookingEnd = request.getScheduledAt().plusMinutes(nailService.getDurationMinutes());
             if (hours.closed() || request.getScheduledAt().toLocalTime().isBefore(hours.openTime())
-                    || bookingEnd.isAfter(hours.closeTime())) {
+                    || !bookingEnd.toLocalDate().equals(request.getScheduledAt().toLocalDate())
+                    || bookingEnd.toLocalTime().isAfter(hours.closeTime())) {
                 throw new BadRequestException("Khung giờ nằm ngoài giờ hoạt động của salon.");
             }
         }
@@ -127,6 +180,9 @@ public class BookingService {
 
         Booking booking = Booking.builder()
                 .customer(customer)
+                .walkInName(walkInName)
+                .customerPhone(customerPhone)
+                .guestEmail(guestEmail)
                 .salon(salon)
                 .service(nailService)
                 .employee(employee)
@@ -138,7 +194,8 @@ public class BookingService {
                 .build();
 
         booking = bookingRepository.save(booking);
-        bookingEmails.enqueue(booking, false);
+        if (!booking.isWalkIn()) bookingEmails.enqueue(booking, false);
+        if (guestEmail != null) bookingEmails.enqueueGuestReceipt(booking);
         return mapToBookingResponse(booking);
     }
 
@@ -147,7 +204,7 @@ public class BookingService {
         Booking booking = bookingRepository.findForUpdateById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
 
-        if (!booking.getCustomer().getId().equals(customerId)) {
+        if (booking.getCustomer() == null || !booking.getCustomer().getId().equals(customerId)) {
             throw new UnauthorizedException("You can only cancel your own bookings");
         }
 
@@ -217,7 +274,13 @@ public class BookingService {
                 booking.setServicePriceSnapshot(booking.getService().getPrice());
                 booking.setRevenueEstimated(true);
             }
-            booking.setCompletedAt(java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")));
+            booking.setCompletedAt(java.time.LocalDateTime.ofInstant(clock.instant(), ZoneId.of("Asia/Ho_Chi_Minh")));
+            booking.setCompletionVersion(booking.getCompletionVersion() + 1);
+            booking.setCompletionConfirmation(booking.getCustomer() == null ? CompletionConfirmation.CONFIRMED : CompletionConfirmation.PENDING);
+            booking.setCompletionRespondedAt(null);
+            booking.setCompletionCustomerNote(null);
+            booking.setCompletionAdminNote(null);
+            booking.setCompletionResolvedAt(null);
         }
         if (request.getSalonNote() != null) {
             booking.setSalonNote(request.getSalonNote());
@@ -228,18 +291,23 @@ public class BookingService {
         }
 
         booking = bookingRepository.save(booking);
-        if (booking.getStatus() == BookingStatus.CONFIRMED) bookingEmails.enqueue(booking, true);
+        if (booking.getStatus() == BookingStatus.CONFIRMED && !booking.isWalkIn()) bookingEmails.enqueue(booking, true);
 
         return mapToBookingResponse(booking);
     }
 
-    private BookingResponse mapToBookingResponse(Booking booking) {
+    BookingResponse mapToBookingResponse(Booking booking) {
+        String phone = booking.getCustomerPhone();
+        if ((phone == null || phone.isBlank()) && booking.getCustomer() != null) phone = booking.getCustomer().getPhone();
         return BookingResponse.builder()
                 .id(booking.getId())
                 .salonId(booking.getSalon().getId())
                 .salonName(booking.getSalon().getName())
                 .salonLogoUrl(booking.getSalon().getLogoUrl())
-                .customerName(booking.getCustomer().getFullName())
+                .customerName(booking.contactName())
+                .customerPhone(phone)
+                .customerEmail(booking.contactEmail())
+                .walkIn(booking.isWalkIn())
                 .serviceId(booking.getService().getId())
                 .serviceName(booking.getService().getName())
                 .servicePrice(booking.getServicePriceSnapshot() != null ? booking.getServicePriceSnapshot() : booking.getService().getPrice())
@@ -254,6 +322,12 @@ public class BookingService {
                 .salonNote(booking.getSalonNote())
                 .cancellationReason(booking.getCancellationReason())
                 .createdAt(booking.getCreatedAt())
+                .completionConfirmation(booking.effectiveCompletionConfirmation())
+                .completionVersion(booking.getCompletionVersion())
+                .completionRespondedAt(booking.getCompletionRespondedAt())
+                .completionCustomerNote(booking.getCompletionCustomerNote())
+                .completionAdminNote(booking.getCompletionAdminNote())
+                .completionResolvedAt(booking.getCompletionResolvedAt())
                 .build();
     }
 }

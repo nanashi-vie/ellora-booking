@@ -40,6 +40,9 @@ Sử dụng stack dưới đây trừ khi người dùng yêu cầu thay đổi 
 - **Database**: PostgreSQL trên Render, Supabase, Neon hoặc dịch vụ tương tự
 - **CDN / DNS**: Cloudflare
 
+### Owner salon location
+- Hồ sơ owner dùng Leaflet tải khi mở bản đồ và OpenStreetMap để chọn/kéo ghim; không cần API key hoặc tài khoản billing. Tọa độ lưu qua luồng admin duyệt hồ sơ hiện có. Chỉ tải tile hiển thị, giữ attribution và cache trình duyệt theo chính sách OpenStreetMap; xem `decisions/2026-10-18-owner-salon-location.md`.
+
 ---
 
 ## 2. Cấu Trúc Repository Mong Muốn

@@ -1,3 +1,39 @@
+.calendar-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px;
+}
+.view-toggle { display: flex; padding: 4px; border: 1px solid #e5e7eb; border-radius: 6px; background: #fdfbfb; }
+.view-toggle button { padding: 6px 20px; border-radius: 4px; font-size: 14px; color: #74656c; cursor: pointer; }
+.view-toggle button[aria-pressed='true'] { color: #8c3a5a; background: #fff; box-shadow: 0 1px 3px #00000015; font-weight: 600; }
+.date-navigator { order: 3; display: flex; width: 100%; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; }
+.date-arrow { padding: 8px; border-radius: 6px; color: #665860; cursor: pointer; }
+.date-arrow:hover { background: #fdf6f8; }
+.calendar-period { font-size: 14px; font-weight: 700; text-align: center; flex: 1; }
+.date-picker { max-width: 100%; border: 1px solid #e5e7eb; padding: 6px 8px; border-radius: 6px; font-size: 13px; color: #665860; background: white; }
+.today-button { border: 1px solid #e5e7eb; padding: 7px 12px; border-radius: 6px; font-size: 13px; color: #8c3a5a; cursor: pointer; }
+.walk-in-button { margin-left: auto; }
+.calendar-toolbar button:focus-visible, .date-picker:focus-visible, .week-day-heading:focus-visible { outline: 2px solid #8c3a5a; outline-offset: 2px; }
+.week-calendar { background: #fdfbfb; }
+.week-columns { display: grid; grid-template-columns: repeat(7, minmax(250px, 1fr)); min-height: 100%; }
+.week-day { min-width: 0; border-right: 1px solid #eee8eb; }
+.week-day-heading { position: sticky; top: 0; z-index: 10; width: 100%; min-height: 72px; padding: 12px; border-bottom: 1px solid #eee8eb; background: #fff; text-align: left; color: #453a40; cursor: pointer; }
+.week-day-heading strong, .week-day-heading span { display: block; }
+.week-day-heading span { margin-top: 4px; font-size: 12px; color: #74656c; }
+.week-day-heading:hover, .week-day-heading.selected-day { background: #fdf0f5; color: #8c3a5a; }
+.week-day-bookings { display: flex; flex-direction: column; gap: 12px; padding: 12px; }
+.week-booking { position: relative; isolation: isolate; display: flex; min-width: 0; flex-direction: column; border: 1px solid #eadfe3; border-left: 4px solid #f2a4bb; border-radius: 8px; padding: 12px; background: #fff; box-shadow: 0 1px 3px #00000008; }
+.week-booking.pending-booking { border: 2px dashed #f2a4bb; }
+.week-empty { margin-top: 12px; font-size: 13px; text-align: center; color: #74656c; }
+@media (min-width: 1280px) {
+  .calendar-toolbar { padding: 16px 24px; }
+  .date-navigator { order: initial; flex: 1; width: auto; }
+  .calendar-period { flex: initial; }
+  .walk-in-button { margin-left: 0; }
+}
+
 /* Custom scrollbar for hours column */
 .overflow-y-auto::-webkit-scrollbar {
   width: 6px;

@@ -9,6 +9,7 @@ import com.bookingnailms.entity.Review;
 import com.bookingnailms.entity.Salon;
 import com.bookingnailms.entity.User;
 import com.bookingnailms.enums.BookingStatus;
+import com.bookingnailms.enums.CompletionConfirmation;
 import com.bookingnailms.exception.BadRequestException;
 import com.bookingnailms.exception.ResourceNotFoundException;
 import com.bookingnailms.exception.UnauthorizedException;
@@ -43,24 +44,29 @@ public class ReviewService {
         User customer = userRepository.findById(customerId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", customerId));
 
+        // Match admin reopen's salon -> booking order, including retries of upheld cases.
+        Long salonId = bookingRepository.findSalonIdById(request.getBookingId())
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", request.getBookingId()));
+        Salon salon = salonRepository.findForUpdateById(salonId)
+                .orElseThrow(() -> new ResourceNotFoundException("Salon not found"));
         Booking booking = bookingRepository.findForUpdateById(request.getBookingId())
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", request.getBookingId()));
 
-        if (!booking.getCustomer().getId().equals(customerId)) {
+        if (booking.getCustomer() == null || !booking.getCustomer().getId().equals(customerId)) {
             throw new UnauthorizedException("Bạn chỉ có thể đánh giá lịch hẹn của mình.");
         }
 
         if (booking.getStatus() != BookingStatus.COMPLETED) {
             throw new BadRequestException("Chỉ có thể đánh giá lịch hẹn đã hoàn thành.");
         }
+        var confirmation = booking.effectiveCompletionConfirmation();
+        if (confirmation != CompletionConfirmation.CONFIRMED && confirmation != CompletionConfirmation.ADMIN_CONFIRMED) {
+            throw new BadRequestException("Vui lòng xác nhận đã sử dụng dịch vụ trước khi đánh giá.");
+        }
 
         if (reviewRepository.existsByBookingId(booking.getId())) {
             throw new BadRequestException("Bạn đã đánh giá lịch hẹn này rồi.");
         }
-
-        // Serialize rating updates across different bookings for the same salon.
-        Salon salon = salonRepository.findForUpdateById(booking.getSalon().getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Salon not found"));
 
         Review review = Review.builder()
                 .customer(customer)

@@ -7,11 +7,12 @@ export interface SalonRegistration {
   logoUrl?: string; imageUrls?: string[];
   id: number; name: string; address: string; city: string; district: string;
   phone: string | null; email: string | null; description: string | null;
+  latitude?: number | null; longitude?: number | null;
   ownerName: string; ownerId: string;
   status: 'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED';
 }
 interface Response<T> { data: T; }
-export type SalonProfileFields = Pick<SalonRegistration, 'name'|'description'|'address'|'city'|'district'|'phone'|'email'>;
+export type SalonProfileFields = Pick<SalonRegistration, 'name'|'description'|'address'|'city'|'district'|'phone'|'email'|'latitude'|'longitude'>;
 export interface SalonProfileChange {
   id:number; salonId:number; salonName:string; current:SalonProfileFields; proposed:SalonProfileFields;
   status:'PENDING'|'APPROVED'|'REJECTED'; submittedAt:string; reviewedAt:string|null;

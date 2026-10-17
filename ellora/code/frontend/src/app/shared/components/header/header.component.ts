@@ -1,12 +1,17 @@
-import { Component, ElementRef, HostBinding, HostListener, inject, OnInit, OnDestroy, PLATFORM_ID, ChangeDetectorRef, ViewChild, NgZone } from '@angular/core';
+import { Component, ElementRef, HostBinding, HostListener, inject, OnInit, OnDestroy, PLATFORM_ID, ChangeDetectorRef, NgZone } from '@angular/core';
 import { isPlatformBrowser, CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
+import { CdkTrapFocus } from '@angular/cdk/a11y';
+import { filter } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { SalonSearchFormComponent } from '../salon-search-form/salon-search-form.component';
+import { PublicSalonSearchService } from '../../../services/public-salon-search.service';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, CdkTrapFocus, SalonSearchFormComponent],
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss'
 })
@@ -17,6 +22,8 @@ export class Header implements OnInit, OnDestroy {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly zone = inject(NgZone);
+  readonly search = inject(PublicSalonSearchService);
+  private destroyed = false;
 
   private readonly handleScroll = () => {
     const atTop = window.scrollY <= 20;
@@ -31,16 +38,23 @@ export class Header implements OnInit, OnDestroy {
   isDropdownOpen = false;
   isMobileMenuOpen = false;
   isSearchActive = false;
-  activeSearchSection: 'service' | 'location' | 'time' | null = null;
-
-  @ViewChild('serviceInput') serviceInput?: ElementRef<HTMLInputElement>;
-  @ViewChild('locationInput') locationInput?: ElementRef<HTMLInputElement>;
 
   showComingSoon = false;
   private comingSoonTimer: ReturnType<typeof setTimeout> | undefined;
 
   @HostBinding('class.header-hidden')
   isHidden = false;
+
+  constructor() {
+    this.router.events.pipe(filter(event => event instanceof NavigationEnd), takeUntilDestroyed()).subscribe(() => {
+      this.isSearchActive = false; this.isMobileMenuOpen = false; this.isDropdownOpen = false;
+    });
+  }
+
+  get searchSummary(): string {
+    const value = this.search.filters();
+    return [value.keyword || 'Tiệm, dịch vụ', value.nearby ? 'Gần bạn' : value.location || 'Khu vực', value.date ? value.date.split('-').reverse().join('/') + (value.time ? ' ' + value.time : '') : 'Ngày, giờ'].join(' · ');
+  }
 
   async ngOnInit(): Promise<void> {
     if (!isPlatformBrowser(this.platformId)) {
@@ -52,6 +66,7 @@ export class Header implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     if (isPlatformBrowser(this.platformId)) window.removeEventListener('scroll', this.handleScroll);
     clearTimeout(this.comingSoonTimer);
   }
@@ -74,7 +89,6 @@ export class Header implements OnInit, OnDestroy {
       this.isDropdownOpen = false;
       this.isMobileMenuOpen = false;
       this.isSearchActive = false;
-      this.activeSearchSection = null;
     }
   }
 
@@ -82,35 +96,27 @@ export class Header implements OnInit, OnDestroy {
     this.isDropdownOpen = !this.isDropdownOpen;
   }
 
-  toggleSearch(active?: boolean, section?: 'service' | 'location' | 'time' | null): void {
-    if (active !== undefined) {
-      this.isSearchActive = active;
-    } else {
-      this.isSearchActive = !this.isSearchActive;
-    }
-
-    this.activeSearchSection = section || null;
-
-    if (this.isSearchActive && this.activeSearchSection) {
-      setTimeout(() => {
-        if (this.activeSearchSection === 'service') {
-          this.serviceInput?.nativeElement.focus();
-        } else if (this.activeSearchSection === 'location') {
-          this.locationInput?.nativeElement.focus();
-        }
-      }, 50);
-    }
-
+  toggleSearch(active?: boolean): void {
+    this.isSearchActive = active ?? !this.isSearchActive;
+    if (this.isSearchActive) { this.isDropdownOpen = false; this.isMobileMenuOpen = false; }
     this.cdr.detectChanges();
   }
 
+  @HostListener('document:keydown.escape', ['$event'])
+  closeSearchOnEscape(event: Event): void {
+    if (!this.isSearchActive) return;
+    event.preventDefault(); this.toggleSearch(false);
+  }
+
   toggleMobileMenu(): void {
+    this.isSearchActive = false;
     this.isMobileMenuOpen = !this.isMobileMenuOpen;
   }
 
   navigateTo(route: string): void {
     this.isDropdownOpen = false;
     this.isMobileMenuOpen = false;
+    this.isSearchActive = false;
     this.router.navigateByUrl(route);
   }
 
@@ -149,7 +155,7 @@ export class Header implements OnInit, OnDestroy {
       }
     } finally {
       this.isAuthChecking = false;
-      this.cdr.detectChanges();
+      if (!this.destroyed) this.cdr.detectChanges();
     }
   }
 }

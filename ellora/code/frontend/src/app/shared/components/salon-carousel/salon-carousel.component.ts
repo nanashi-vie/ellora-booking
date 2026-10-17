@@ -1,6 +1,6 @@
 import { Component, ElementRef, Input, ViewChild, signal, AfterViewInit, OnDestroy, NgZone, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Params, RouterModule } from '@angular/router';
 import { Salon } from '../../../models/ellora.model';
 import { SalonCard } from '../salon-card/salon-card.component';
 import { RevealOnScrollDirective } from '../../directives/reveal-on-scroll.directive';
@@ -18,6 +18,7 @@ export class SalonCarouselComponent implements AfterViewInit, OnDestroy {
   @Input({ required: true }) salons: Salon[] = [];
   @Input() animateHeader = true;
   @Input() animateCards = true;
+  @Input() viewAllQueryParams: Params | null = null;
 
   @ViewChild('scrollContainer') scrollContainer!: ElementRef<HTMLElement>;
   private readonly zone = inject(NgZone);

@@ -9,6 +9,8 @@ import com.bookingnailms.enums.Role;
 import com.bookingnailms.repository.*;
 import com.bookingnailms.service.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -67,6 +69,53 @@ class RoleSecurityTest {
         as(Role.CUSTOMER);
         mvc.perform(get("/bookings/my").header("Authorization","Bearer test-token")).andExpect(status().isOk());
         verify(bookings).getMyBookings(eq(id),any());
+    }
+
+    @Test void customerBookingPhoneUsesRequestAndAuthenticatedCustomerWithLegacyRequestsAllowed() throws Exception {
+        as(Role.CUSTOMER);
+        String fields = "\"salonId\":1,\"serviceId\":2,\"scheduledAt\":\"2026-10-17T11:07:00\"";
+        mvc.perform(post("/bookings").header("Authorization", "Bearer test-token").contentType("application/json")
+                .content("{" + fields + ",\"customerPhone\":\"+84 (90) 123-4567\",\"customerId\":\"" + UUID.randomUUID() + "\"}"))
+                .andExpect(status().isCreated());
+        verify(bookings).createBooking(argThat(request -> "+84 (90) 123-4567".equals(request.getCustomerPhone())), eq(id));
+        mvc.perform(post("/bookings").header("Authorization", "Bearer test-token").contentType("application/json")
+                .content("{" + fields + "}")).andExpect(status().isCreated());
+        verify(bookings).createBooking(argThat(request -> request.getCustomerPhone() == null), eq(id));
+        mvc.perform(post("/bookings").header("Authorization", "Bearer test-token").contentType("application/json")
+                .content("{" + fields + ",\"customerPhone\":\"\"}")).andExpect(status().isCreated());
+        verify(bookings).createBooking(argThat(request -> "".equals(request.getCustomerPhone())), eq(id));
+        verifyNoInteractions(profiles);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "invalid", "1234567", "123456789012345678901", "090/123/4567", "        ", "--------" })
+    void customerBookingRejectsInvalidPhoneBeforeCallingService(String phone) throws Exception {
+        as(Role.CUSTOMER);
+        mvc.perform(post("/bookings").header("Authorization", "Bearer test-token").contentType("application/json")
+                .content("{\"salonId\":1,\"serviceId\":2,\"scheduledAt\":\"2026-10-17T11:07:00\",\"customerPhone\":\"" + phone + "\"}"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(bookings, profiles);
+    }
+
+    @Test void walkInsAndClosuresAreOwnerOnlyAndUseJwtIdentity() throws Exception {
+        String body = "{\"serviceId\":2,\"scheduledAt\":\"2026-10-15T10:00:00\",\"salonId\":999}";
+        for (Role role : List.of(Role.CUSTOMER, Role.ADMIN)) {
+            as(role);
+            mvc.perform(post("/owner/bookings/walk-ins").header("Authorization", "Bearer test-token")
+                    .contentType("application/json").content(body)).andExpect(status().isForbidden());
+            mvc.perform(post("/owner/salon/closures").header("Authorization", "Bearer test-token")
+                    .contentType("application/json").content("{\"date\":\"2026-10-15\"}")).andExpect(status().isForbidden());
+        }
+        verifyNoInteractions(bookings, workingHours);
+        as(Role.SALON_OWNER);
+        mvc.perform(post("/owner/bookings/walk-ins").header("Authorization", "Bearer test-token")
+                .contentType("application/json").content(body)).andExpect(status().isCreated());
+        verify(bookings).createWalkIn(any(), eq(id));
+        mvc.perform(post("/owner/salon/closures").header("Authorization", "Bearer test-token")
+                .contentType("application/json").content("{\"date\":\"2026-10-15\",\"reason\":\"Bận\"}")).andExpect(status().isOk());
+        verify(workingHours).closeDate(eq(id), any());
+        mvc.perform(post("/owner/bookings/walk-ins").header("Authorization", "Bearer test-token")
+                .contentType("application/json").content("{\"serviceId\":2}")).andExpect(status().isBadRequest());
     }
 
     @Test void profileUpdatesUseJwtIdentityAndValidateFields() throws Exception {
