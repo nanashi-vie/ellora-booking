@@ -47,6 +47,13 @@ public class PublicSalonController {
         return ApiResponse.success(workingHours.get(id), null);
     }
 
+    @GetMapping("/{id}/closures")
+    public ApiResponse<List<java.time.LocalDate>> closures(@PathVariable Long id,
+            @RequestParam java.time.LocalDate from, @RequestParam java.time.LocalDate to) {
+        active(id);
+        return ApiResponse.success(workingHours.closedDates(id, from, to), null);
+    }
+
     @GetMapping("/{id}/services")
     public ApiResponse<List<ServiceResponse>> services(@PathVariable Long id) {
         active(id);

@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import com.bookingnailms.enums.BookingStatus;
+import com.bookingnailms.enums.CompletionConfirmation;
 
 @Data
 @Builder
@@ -18,6 +19,8 @@ public class BookingResponse {
     private String salonName;
     private String salonLogoUrl;
     private String customerName;
+    private String customerPhone;
+    private boolean walkIn;
     private Long serviceId;
     private String serviceName;
     private java.math.BigDecimal servicePrice;
@@ -32,4 +35,10 @@ public class BookingResponse {
     private String salonNote;
     private String cancellationReason;
     private LocalDateTime createdAt;
+    private CompletionConfirmation completionConfirmation;
+    private long completionVersion;
+    private LocalDateTime completionRespondedAt;
+    private String completionCustomerNote;
+    private String completionAdminNote;
+    private LocalDateTime completionResolvedAt;
 }

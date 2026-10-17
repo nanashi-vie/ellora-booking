@@ -13,6 +13,8 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.util.ReflectionTestUtils;
 import java.time.LocalDateTime;
 import java.time.Instant;
+import java.time.Clock;
+import java.time.ZoneOffset;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -60,7 +62,8 @@ class BookingNotificationTest {
         when(employeeRepository.findBySalonIdAndActiveTrue(2L)).thenReturn(List.of(
                 Employee.builder().id(4L).salon(booking.getSalon()).active(true).build()));
         when(repository.save(any())).thenReturn(booking);
-        BookingService service = new BookingService(repository, salons, services, employeeRepository, users, emails);
+        BookingService service = new BookingService(repository, salons, services, employeeRepository, users, emails, null,
+                Clock.fixed(Instant.parse("2026-10-01T00:00:00Z"), ZoneOffset.UTC));
         var request = new com.bookingnailms.dto.booking.BookingRequest(2L, 3L, null, booking.getScheduledAt(), null);
         service.createBooking(request, booking.getCustomer().getId());
         verify(emails).enqueue(booking, false);

@@ -70,6 +70,12 @@ REJECTED        // Bị từ chối
 ### Quy tắc booking:
 - Booking mới tạo phải bắt đầu với trạng thái `PENDING`.
 - Chủ salon có thể xác nhận (`CONFIRMED`), từ chối (`REJECTED`), bắt đầu thực hiện (`IN_PROGRESS`), hoặc hoàn thành (`COMPLETED`) hoặc hủy (`CANCELLED`) booking.
-- Khách hàng chỉ có thể review sau khi booking ở trạng thái `COMPLETED`.
+- Khách hàng chỉ có thể review khi booking ở trạng thái `COMPLETED` và khách đã xác nhận sử dụng dịch vụ hoặc admin đã công nhận hoàn thành. Đánh giá cũ được giữ nguyên.
 - Tránh trùng booking cho cùng salon, employee, service, ngày và khung giờ.
 - Redis locking chỉ thêm sau nếu được yêu cầu rõ ràng để xử lý race condition.
+
+### Xác nhận hoàn thành và phản ánh
+- Khi tiệm hoàn thành một lịch online, `completionConfirmation` chuyển sang `PENDING`; khách có thể xác nhận (`CONFIRMED`) hoặc gửi lý do chưa hoàn thành (`DISPUTED`). Mỗi lần hoàn thành mới có `completionVersion` riêng để chặn phản hồi từ phiên cũ.
+- Phản ánh lưu trong `booking_completion_disputes`; chỉ admin xem đầy đủ thông tin liên hệ hai bên và xử lý. Admin ghi kết luận, chọn `UPHELD` (booking giữ `COMPLETED`, xác nhận `ADMIN_CONFIRMED`) hoặc `REOPENED` (booking về `IN_PROGRESS`). Giữ lịch sử từng lần xử lý; không tự tạo lịch mới hoặc hoàn tiền.
+- `COMPLETED` tiếp tục tham gia báo cáo cho đến khi admin trả lịch về `IN_PROGRESS`. Giữ nguyên thời điểm hoàn thành khi khách phản hồi hoặc admin công nhận để không làm lệch kỳ báo cáo.
+- Supabase dùng `ddl-auto:none`: áp dụng `code/backend/src/main/resources/db/booking-completion-confirmation.sql` trước khi chạy backend có tính năng này. Chi tiết hợp đồng và kiểm chứng ở `docs/decisions/2026-10-17-booking-completion-confirmation.md`.

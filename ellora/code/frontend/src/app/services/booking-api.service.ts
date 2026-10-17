@@ -11,11 +11,17 @@ export interface BookingCreateRequest {
   employeeId?: number;        // optional — null = "bất kỳ thợ nào"
   scheduledAt: string;        // ISO-8601, e.g. "2026-10-15T09:00:00"
   customerNote?: string;
+  customerPhone?: string;
 }
 
 export interface BookingStatusUpdateRequest {
   status: BookingStatus;
   salonNote?: string;
+}
+
+export interface WalkInBookingRequest {
+  serviceId: number; employeeId?: number; scheduledAt: string;
+  customerName?: string; customerPhone?: string; customerNote?: string;
 }
 
 export type BookingStatus =
@@ -26,12 +32,16 @@ export type BookingStatus =
   | 'CANCELLED'
   | 'REJECTED';
 
+export type CompletionConfirmation = 'PENDING' | 'CONFIRMED' | 'DISPUTED' | 'ADMIN_CONFIRMED' | 'REOPENED';
+
 export interface BookingItem {
   id: number;
   salonId: number;
   salonName: string;
   salonLogoUrl?: string | null;
   customerName: string;
+  customerPhone?: string | null;
+  walkIn?: boolean;
   serviceId: number;
   serviceName: string;
   servicePrice: number;
@@ -46,6 +56,12 @@ export interface BookingItem {
   salonNote?: string;
   cancellationReason?: string;
   createdAt: string;
+  completionConfirmation?: CompletionConfirmation | null;
+  completionVersion?: number;
+  completionRespondedAt?: string | null;
+  completionCustomerNote?: string | null;
+  completionAdminNote?: string | null;
+  completionResolvedAt?: string | null;
 }
 
 interface ApiResponse<T> {
@@ -97,6 +113,12 @@ export class BookingApiService {
     return res.data;
   }
 
+  async respondToCompletion(id: number, response: { completed: boolean; completionVersion: number; reason?: string }): Promise<BookingItem> {
+    return (await firstValueFrom(this.http.post<ApiResponse<BookingItem>>(
+      `${this.base}/bookings/${id}/completion-response`, response
+    ))).data;
+  }
+
   /** Hủy booking (customer) */
   async cancelBooking(id: number): Promise<void> {
     await firstValueFrom(
@@ -105,6 +127,10 @@ export class BookingApiService {
   }
 
   // ── OWNER ─────────────────────────────────────────────────────────────────
+
+  async createWalkIn(request: WalkInBookingRequest): Promise<BookingItem> {
+    return (await firstValueFrom(this.http.post<ApiResponse<BookingItem>>(`${this.base}/owner/bookings/walk-ins`, request))).data;
+  }
 
   /** Lấy danh sách booking của salon (owner) */
   async getSalonBookings(

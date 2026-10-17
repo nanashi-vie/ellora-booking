@@ -3,12 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AdminUsersApiService, AdminUser } from '../../services/admin-users-api.service';
-import { AdminNavigationComponent } from '../admin-content/admin-navigation.component';
 
-@Component({standalone:true,imports:[CommonModule,FormsModule,AdminNavigationComponent],styleUrl:'../owner/owner-data.scss',template:`
-<section class="owner-page" style="max-width:none;padding:0">
- <app-admin-navigation />
- <header><div><h1>Quản lý người dùng</h1><p class="muted">Tra cứu tài khoản và quản lý quyền truy cập Ellora.</p></div></header>
+@Component({standalone:true,imports:[CommonModule,FormsModule],styleUrl:'../admin-content/admin-page.scss',template:`
+<section class="admin-page">
+ <header class="admin-page-header"><div><h1>Quản lý người dùng</h1><p>Tra cứu tài khoản và quản lý quyền truy cập Ellora.</p></div></header>
  @if(error()){<p class="error" role="alert">{{error()}}</p>}
  @if(message()){<p class="success" role="status">{{message()}}</p>}
  <section class="card">

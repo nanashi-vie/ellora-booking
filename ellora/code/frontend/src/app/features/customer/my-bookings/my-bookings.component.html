@@ -33,46 +33,80 @@
 
   <div class="flex flex-col gap-4">
     @if (reviewSuccess()) { <p role="status" class="text-emerald-800">{{ reviewSuccess() }}</p> }
+    @if (completionSuccess()) { <p role="status" class="text-emerald-800">{{ completionSuccess() }}</p> }
+    @if (completionError()) { <p role="alert" class="text-red-700">{{ completionError() }}</p> }
     @if (error()) { <p role="alert" class="text-red-700">{{ error() }}</p> }
     @if (loading() && !bookings().length) { <p role="status">Đang tải lịch hẹn…</p> }
     @for (booking of filteredBookings(); track booking.id) {
-      <div class="group flex items-center justify-between p-4 md:p-5 rounded-xl border border-charcoal-800/10 hover:border-dusty-pink-500/30 hover:shadow-sm transition-all cursor-pointer bg-[#FCF9F6]/30">
+      <div class="group flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 md:p-5 rounded-xl border border-charcoal-800/10 hover:border-dusty-pink-500/30 hover:shadow-sm transition-all bg-[#FCF9F6]/30">
         
-        <div class="flex items-center gap-5">
+        <div class="flex items-center gap-5 min-w-0">
           <!-- Image -->
           <div class="w-16 h-16 rounded-xl overflow-hidden shrink-0 shadow-sm border border-black/5">
             <img [src]="booking.salonLogoUrl || '/salon-placeholder.svg'" [alt]="booking.salonName" class="w-full h-full object-cover">
           </div>
           
           <!-- Info -->
-          <div class="flex flex-col gap-1">
+          <div class="flex flex-col gap-1 min-w-0 break-words">
             <h3 class="font-bold text-charcoal-900 text-[15px] group-hover:text-dusty-pink-700 transition-colors">{{ booking.serviceName }}</h3>
             <p class="text-sm text-charcoal-800/70">{{ booking.salonName }}</p>
             <p class="text-sm text-charcoal-800/90 font-medium">{{ booking.scheduledAt | date:'short' }}</p>
           </div>
         </div>
 
-        <div class="flex items-center gap-4 shrink-0">
+        <div class="flex flex-wrap items-center gap-3 shrink-0">
           <!-- Status Badge -->
           <span class="px-4 py-1.5 rounded-full text-xs font-bold tracking-wide"
                 [ngClass]="{
                   'bg-dusty-pink-200/50 text-dusty-pink-700': booking.status === 'PENDING' || booking.status === 'CONFIRMED' || booking.status === 'IN_PROGRESS',
                   'bg-pink-100/50 text-pink-600': booking.status === 'COMPLETED'
                 }">
-            {{ booking.status === 'PENDING' ? 'Chờ xác nhận' : booking.status === 'CONFIRMED' ? 'Đã xác nhận' : booking.status === 'IN_PROGRESS' ? 'Đang thực hiện' : booking.status === 'COMPLETED' ? 'Hoàn thành' : booking.status === 'CANCELLED' ? 'Đã hủy' : 'Đã từ chối' }}
+            {{ booking.status === 'PENDING' ? 'Chờ xác nhận' : booking.status === 'CONFIRMED' ? 'Đã xác nhận' : booking.status === 'IN_PROGRESS' ? 'Đang thực hiện' : booking.status === 'COMPLETED' ? (completionState(booking) === 'PENDING' ? 'Tiệm báo hoàn thành' : completionState(booking) === 'DISPUTED' ? 'Chờ admin xử lý' : 'Đã sử dụng dịch vụ') : booking.status === 'CANCELLED' ? 'Đã hủy' : 'Đã từ chối' }}
           </span>
           @if (booking.status === 'COMPLETED') {
             @if (booking.reviewed) { <span class="text-sm text-emerald-700">Đã đánh giá</span> }
-            @else { <button type="button" (click)="openReview(booking)" [disabled]="reviewSaving()" class="px-4 py-2 rounded bg-dusty-pink-500 text-white text-sm">Đánh giá</button> }
+            @else if (canReview(booking)) { <button type="button" (click)="openReview(booking)" [disabled]="reviewSaving()" class="px-4 py-2 rounded bg-dusty-pink-500 text-white text-sm">Đánh giá</button> }
           }
           @if (booking.status === 'PENDING' || booking.status === 'CONFIRMED') { <button type="button" class="text-sm text-red-700" (click)="cancel(booking.id)">Hủy lịch</button> }
           
-          <!-- Arrow -->
-          <button class="w-8 h-8 flex items-center justify-center text-charcoal-800/40 group-hover:text-charcoal-900 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-          </button>
         </div>
       </div>
+      @if (booking.status === 'COMPLETED' || completionState(booking) === 'REOPENED') {
+        <section class="completion-panel" [attr.aria-label]="'Xác nhận dịch vụ cho lịch #' + booking.id" [attr.data-testid]="'completion-' + booking.id">
+          @if (canRespond(booking)) {
+            <p class="font-semibold">Tiệm đã báo hoàn thành dịch vụ. Bạn xác nhận giúp tiệm nhé.</p>
+            <div class="completion-actions">
+              <button type="button" class="confirm-service" [disabled]="completionSaving() !== null" (click)="confirmService(booking)">Đã sử dụng dịch vụ</button>
+              <button type="button" class="report-service" [disabled]="completionSaving() !== null" (click)="openDispute(booking)">Chưa hoàn thành</button>
+            </div>
+            @if (disputeId() === booking.id) {
+              <form (ngSubmit)="submitDispute()" class="completion-form" aria-label="Phản ánh dịch vụ chưa hoàn thành">
+                <label [for]="'completion-reason-' + booking.id">Lý do chưa hoàn thành (bắt buộc)</label>
+                <textarea [id]="'completion-reason-' + booking.id" name="completionReason" [(ngModel)]="disputeReason" rows="3" maxlength="1000" required [disabled]="completionSaving() !== null" placeholder="Mô tả vấn đề để admin liên hệ với bạn và tiệm."></textarea>
+                <p class="text-xs text-charcoal-800/60">Admin sẽ xem thông tin lịch hẹn và liên hệ hai bên để xử lý.</p>
+                <div class="completion-actions">
+                  <button type="submit" class="confirm-service" [disabled]="completionSaving() !== null">{{ completionSaving() === booking.id ? 'Đang gửi…' : 'Gửi admin xử lý' }}</button>
+                  <button type="button" class="report-service" [disabled]="completionSaving() !== null" (click)="disputeId.set(null)">Đóng</button>
+                </div>
+              </form>
+            }
+          } @else if (completionState(booking) === 'DISPUTED') {
+            <p class="font-semibold">Phản ánh đang chờ admin xử lý.</p>
+            <p>Admin sẽ liên hệ với bạn và tiệm dựa trên thông tin lịch hẹn.</p>
+          } @else if (completionState(booking) === 'ADMIN_CONFIRMED') {
+            <p class="font-semibold">Admin đã xác minh và công nhận dịch vụ hoàn thành.</p>
+          } @else if (completionState(booking) === 'REOPENED') {
+            <p class="font-semibold">Admin đã trả lịch về Đang thực hiện để tiệm tiếp tục xử lý.</p>
+          } @else {
+            <p class="font-semibold text-emerald-800">Bạn đã xác nhận sử dụng dịch vụ.</p>
+          }
+          @if (booking.completionCustomerNote) { <p class="completion-note"><strong>Phản ánh của bạn:</strong> {{ booking.completionCustomerNote }}</p> }
+          @if (booking.completionAdminNote) {
+            <p class="completion-note"><strong>Kết luận của admin:</strong> {{ booking.completionAdminNote }}</p>
+            @if (booking.completionResolvedAt) { <p class="text-xs text-charcoal-800/60">Xử lý lúc {{ booking.completionResolvedAt | date:'HH:mm dd/MM/yyyy' }}</p> }
+          }
+        </section>
+      }
         @if (reviewId() === booking.id) {
           <form (ngSubmit)="submitReview()" class="rounded-lg border border-pink-200 bg-white p-6" aria-label="Đánh giá lịch hẹn">
             <h3 class="font-semibold mb-3">Đánh giá {{ booking.salonName }}</h3>

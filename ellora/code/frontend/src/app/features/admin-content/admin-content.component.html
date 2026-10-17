@@ -1,7 +1,5 @@
-<main class="owner-page" style="max-width:1100px;margin:auto">
-  <app-admin-navigation />
-  <header><h1>Quản lý nội dung</h1><a routerLink="/admin/approvals">Duyệt đăng ký tiệm</a></header>
-  <a routerLink="/admin/billing" class="link">Phí nền tảng và thanh toán</a>
+<section class="admin-page">
+  <header class="admin-page-header"><div><h1>Quản lý nội dung</h1><p>Quản lý hình ảnh, đánh giá và phản hồi của các tiệm.</p></div></header>
   @if(error()){<p role="alert" class="error">{{error()}}</p>}
   @if(message()){<p role="status">{{message()}}</p>}
   @if(busy()){<p role="status">Đang xử lý…</p>}
@@ -16,13 +14,13 @@
     <h2>{{salon.name}}</h2>
     <section class="card">
       <h2>Ảnh tiệm, dịch vụ và nhân viên</h2>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:20px">
         @for(photo of salon.photos;track photo.kind+photo.id){
           <app-photo-upload [adminSalonId]="salon.id" [kind]="photo.kind" [entityId]="photo.id" [imageUrl]="photo.url" [label]="photo.name" (saved)="refreshPhotos()" />
         }
       </div>
       <h3>Bộ ảnh tiệm</h3>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:20px">
         @for(url of salon.gallery;track url){<app-photo-upload [adminSalonId]="salon.id" kind="gallery" [entityId]="salon.id" [imageUrl]="url" label="Thay ảnh" (saved)="refreshPhotos()" />}
       </div>
       @if(salon.gallery.length<10){<app-photo-upload [adminSalonId]="salon.id" kind="gallery" [entityId]="salon.id" label="Thêm ảnh tiệm" (saved)="refreshPhotos()" />}
@@ -43,4 +41,4 @@
     } @empty {<p>Chưa có đánh giá.</p>}
     <div class="pager"><button (click)="moveReviews(reviewPage-1)" [disabled]="busy()||reviewPage===0">Trang trước</button><span>{{reviewPage+1}}</span><button (click)="moveReviews(reviewPage+1)" [disabled]="busy()||!reviews()||reviews()?.last">Trang sau</button></div>
   }
-</main>
+</section>

@@ -1,0 +1,109 @@
+<section class="card" aria-labelledby="working-hours-heading">
+  <h2 id="working-hours-heading">Giờ mở cửa & ngày nghỉ</h2>
+  <p class="muted">Chọn ngày trên lịch để chỉnh giờ theo thứ hoặc đặt ngày nghỉ riêng. Giờ Việt Nam · mốc 30 phút.</p>
+  @if (error()) { <p role="alert" class="error">{{ error() }}</p> }
+  @if (message()) { <p role="status" class="success">{{ message() }}</p> }
+  @if (closureError()) { <p role="alert" class="error">{{ closureError() }}</p> }
+  @if (closureMessage()) { <p role="status" class="success">{{ closureMessage() }}</p> }
+  @if (loading() || closureLoading()) { <p role="status">Đang tải lịch hoạt động…</p> }
+  @else if (loaded() && closuresLoaded()) {
+    <div class="schedule-layout">
+      <div class="date-calendar">
+        <div class="calendar-header">
+          <h3 aria-live="polite">{{ calendarTitle() }}</h3>
+          <div class="calendar-nav">
+            <button type="button" aria-label="Tháng trước" (click)="changeMonth(-1)" [disabled]="saving() || closureSaving()">‹</button>
+            <button type="button" aria-label="Tháng sau" (click)="changeMonth(1)" [disabled]="saving() || closureSaving()">›</button>
+          </div>
+        </div>
+        <div class="date-grid" role="group" aria-label="Chọn ngày hoạt động">
+          @for (day of ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']; track day) { <span class="day-heading">{{ day }}</span> }
+          @for (day of calendarDays(); track day.date) {
+            <button type="button" class="date-cell" [class.other-month]="!day.currentMonth"
+              [class.selected]="selectedDate() === day.date" [class.planned]="isPlannedClosure(day.date)" [class.weekly-off]="isWeeklyClosed(day.date)"
+              [attr.aria-label]="(day.date | date:'dd/MM/yyyy') + (isPlannedClosure(day.date) ? ', nghỉ đột xuất' : isWeeklyClosed(day.date) ? ', nghỉ hằng tuần' : '')"
+              [attr.aria-pressed]="selectedDate() === day.date"
+              [disabled]="day.date < minClosureDate() || !day.currentMonth || saving() || closureSaving()" (click)="selectClosureDate(day.date)">{{ day.day }}</button>
+          }
+        </div>
+        <div class="calendar-legend"><span><i class="weekly-dot" aria-hidden="true"></i>Nghỉ hằng tuần</span><span><i class="exception-dot" aria-hidden="true"></i>Nghỉ đột xuất</span></div>
+        <p class="calendar-note">Ngày nghỉ mới cần được chọn trước ít nhất một ngày.</p>
+      </div>
+      <div class="day-editor">
+        @if (selectedDay(); as day) {
+          <p class="selected-date">{{ dayNames[selectedDayIndex()] }} · {{ selectedDate() | date:'dd/MM/yyyy' }}</p>
+          <form [formGroup]="day" (ngSubmit)="saveHours()" class="hours-editor">
+            <fieldset [disabled]="saving() || closureSaving()">
+              <h3>Giờ mở cửa {{ dayNames[selectedDayIndex()].toLowerCase() }}</h3>
+              <p class="scope-note">Áp dụng cho mọi {{ dayNames[selectedDayIndex()].toLowerCase() }} hằng tuần.</p>
+              <label class="closed-toggle"><input type="checkbox" [checked]="day.controls.closed.value" (change)="day.controls.closed.setValue($any($event.target).checked)"> Nghỉ vào thứ này hằng tuần</label>
+              @if (day.controls.closed.value) { <p class="scope-note">Ngày nghỉ mới cần đặt trước một ngày. Các lịch bị ảnh hưởng sẽ bị từ chối/hủy.</p> }
+              @if (!day.controls.closed.value) {
+                <div class="time-pair">
+                  <label>Giờ mở<input type="time" [value]="day.controls.openTime.value" (input)="day.controls.openTime.setValue($any($event.target).value)" step="1800" required></label>
+                  <span aria-hidden="true">–</span>
+                  <label>Giờ đóng<input type="time" [value]="day.controls.closeTime.value" (input)="day.controls.closeTime.setValue($any($event.target).value)" step="1800" required></label>
+                </div>
+              }
+              <button type="submit" class="primary">{{ saving() ? 'Đang lưu…' : 'Lưu giờ theo thứ' }}</button>
+            </fieldset>
+          </form>
+          <form [formGroup]="closureForm" (ngSubmit)="saveSelectedClosure()" class="exception-editor">
+            <fieldset [disabled]="saving() || closureSaving()">
+              <label class="closed-toggle"><input type="checkbox" [checked]="dateClosed()" (change)="dateClosed.set($any($event.target).checked)"> Nghỉ riêng ngày {{ selectedDate() | date:'dd/MM/yyyy' }}</label>
+              @if (dateClosed()) {
+                <label>Lý do (không bắt buộc)<input formControlName="reason" maxlength="500" placeholder="Ví dụ: tiệm bận công việc"></label>
+                <p class="scope-note">Lịch đang chờ/đã xác nhận ngày này sẽ bị từ chối/hủy.</p>
+              } @else {
+                <p class="scope-note">Ngày này dùng giờ hằng tuần. Bỏ ngày nghỉ không tự khôi phục các lịch đã hủy.</p>
+              }
+              <button type="submit" [disabled]="!dateClosed() && !selectedClosure()">{{ closureSaving() ? 'Đang lưu…' : dateClosed() ? 'Lưu ngày nghỉ' : 'Bỏ ngày nghỉ riêng' }}</button>
+            </fieldset>
+          </form>
+        } @else { <p class="muted">Chọn một ngày trên lịch để chỉnh giờ hoặc đặt ngày nghỉ.</p> }
+      </div>
+    </div>
+    <details class="schedule-disclosure">
+      <summary>Chỉnh giờ cho cả tuần</summary>
+      <form [formGroup]="weeklyForm" (ngSubmit)="saveHours()">
+        <fieldset [disabled]="saving() || closureSaving()">
+          <div class="shared-hours">
+            <label>Giờ mở chung<input type="time" formControlName="openTime" step="1800" required></label>
+            <span aria-hidden="true">–</span>
+            <label>Giờ đóng chung<input type="time" formControlName="closeTime" step="1800" required></label>
+            <button type="button" (click)="applyAll()">Áp dụng cả tuần</button>
+          </div>
+          <div formArrayName="days" class="week-list">
+            @for (day of weeklyForm.controls.days.controls; track day.controls.dayOfWeek.value; let i = $index) {
+              <div [formGroupName]="i" class="week-row">
+                <span class="weekday">{{ dayNames[i] }}</span>
+                <div class="day-times">
+                  @if (!day.controls.closed.value) {
+                    <input type="time" formControlName="openTime" step="1800" required [attr.aria-label]="'Giờ mở ' + dayNames[i]">
+                    <span aria-hidden="true">–</span>
+                    <input type="time" formControlName="closeTime" step="1800" required [attr.aria-label]="'Giờ đóng ' + dayNames[i]">
+                  } @else { <span class="closed-label">Đóng cửa</span> }
+                </div>
+                <label class="closed-toggle"><input type="checkbox" formControlName="closed" [attr.aria-label]="'Đóng cửa ' + dayNames[i]"> Nghỉ</label>
+              </div>
+            }
+          </div>
+          <p class="scope-note">Đóng cửa theo thứ sẽ từ chối/hủy các lịch bị ảnh hưởng từ ngày mai. Không thể thêm ngày nghỉ cho thứ hôm nay.</p>
+          <button type="submit" class="primary">{{ saving() ? 'Đang lưu…' : 'Lưu giờ cả tuần' }}</button>
+        </fieldset>
+      </form>
+    </details>
+    <details class="schedule-disclosure">
+      <summary>Ngày nghỉ đột xuất đã lưu ({{ closures().length }})</summary>
+      <ul class="closure-list">
+        @for (closure of closures(); track closure.id) {
+          <li><span><strong>{{ closure.date | date:'dd/MM/yyyy' }}</strong> · {{ closure.reason }}</span><button type="button" (click)="removeClosure(closure)" [disabled]="saving() || closureSaving()">Bỏ ngày nghỉ</button></li>
+        } @empty { <li class="muted">Chưa có ngày nghỉ đột xuất.</li> }
+      </ul>
+      <p class="scope-note">Bỏ ngày nghỉ riêng sẽ dùng lại lịch theo thứ. Các lịch đã hủy không tự khôi phục.</p>
+    </details>
+  } @else {
+    @if (!loaded()) { <button type="button" (click)="load()">Thử tải giờ mở cửa</button> }
+    @if (!closuresLoaded()) { <button type="button" (click)="loadClosures()">Thử tải ngày nghỉ</button> }
+  }
+</section>

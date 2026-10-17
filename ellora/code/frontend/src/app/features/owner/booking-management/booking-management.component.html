@@ -1,25 +1,27 @@
-<div class="h-[calc(100vh-80px)] flex flex-col bg-white">
+<div class="h-[calc(100dvh-80px)] min-h-0 flex flex-col bg-white">
   <!-- Top Header -->
-  <div class="h-20 border-b border-gray-100 flex items-center justify-between px-8 shrink-0">
+  <div class="calendar-toolbar border-b border-gray-100 shrink-0">
     <!-- Day/Week Toggle -->
-    <div class="flex items-center bg-[#FDFBFB] border border-gray-200 rounded-md overflow-hidden p-1 shadow-sm">
-      <button class="px-5 py-1.5 text-sm font-medium bg-white text-charcoal-900 shadow-sm rounded">Ngày</button>
-      <button class="px-5 py-1.5 text-sm font-medium text-charcoal-800/60 hover:text-charcoal-900 transition-colors rounded">Tuần</button>
+    <div class="view-toggle" role="group" aria-label="Chế độ xem lịch">
+      <button type="button" data-testid="calendar-day-tab" [attr.aria-pressed]="viewMode() === 'day'" (click)="setView('day')">Ngày</button>
+      <button type="button" data-testid="calendar-week-tab" [attr.aria-pressed]="viewMode() === 'week'" (click)="setView('week')">Tuần</button>
     </div>
     
     <!-- Date Navigator -->
-    <div class="flex items-center gap-6">
-      <button class="text-charcoal-800/60 hover:text-charcoal-900 transition-colors">
+    <div class="date-navigator">
+      <button type="button" data-testid="calendar-prev" [attr.aria-label]="viewMode() === 'day' ? 'Ngày trước' : 'Tuần trước'" (click)="navigatePeriod(-1)" class="date-arrow">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><polyline points="15 18 9 12 15 6"></polyline></svg>
       </button>
-      <span class="text-lg font-bold text-charcoal-900">{{ currentDate }}</span>
-      <button class="text-charcoal-800/60 hover:text-charcoal-900 transition-colors">
+      <span class="calendar-period" aria-live="polite">{{ currentDate() }}</span>
+      <button type="button" data-testid="calendar-next" [attr.aria-label]="viewMode() === 'day' ? 'Ngày tiếp theo' : 'Tuần tiếp theo'" (click)="navigatePeriod(1)" class="date-arrow">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><polyline points="9 18 15 12 9 6"></polyline></svg>
       </button>
+      <input type="date" class="date-picker" aria-label="Chọn ngày xem lịch hẹn" data-testid="calendar-date-picker" [value]="selectedDate()" (change)="setDate($any($event.target).value)" />
+      <button type="button" class="today-button" data-testid="calendar-today" (click)="goToday()">Hôm nay</button>
     </div>
     
     <!-- Khách vãng lai Button -->
-    <button (click)="isSidebarOpen = true" class="border-[1.5px] border-[#8C3A5A] text-[#8C3A5A] hover:bg-[#FDF6F8] px-5 py-2 rounded-md text-sm font-semibold flex items-center gap-2 transition-colors">
+    <button type="button" (click)="isSidebarOpen = true" class="walk-in-button border-[1.5px] border-[#8C3A5A] text-[#8C3A5A] hover:bg-[#FDF6F8] px-5 py-2 rounded-md text-sm font-semibold flex items-center gap-2 transition-colors">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
         <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
         <circle cx="8.5" cy="7" r="4"></circle>
@@ -31,12 +33,15 @@
   </div>
   
   @if (error()) { <p role="alert" class="px-6 py-2 text-red-700">{{ error() }}</p> }
+  @if (message()) { <p role="status" class="px-6 py-2 text-green-800">{{ message() }}</p> }
   <details open class="shrink-0 border-b border-gray-100 px-6 py-3">
-    <summary class="cursor-pointer font-semibold text-[#8C3A5A]">Quản lý lịch đang chờ và đang thực hiện ({{ activeBookings().length }})</summary>
+    <summary class="cursor-pointer font-semibold text-[#8C3A5A]">Lịch cần xử lý trong {{ viewMode() === 'day' ? 'ngày' : 'tuần' }} ({{ activeBookings().length }})</summary>
     <div class="max-h-64 overflow-auto mt-3 space-y-3">
       @for (booking of activeBookings(); track booking.id) {
         <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm">
-          <div><strong>{{ booking.customerName }}</strong><p>{{ booking.serviceName }} · {{ booking.date | date:'dd/MM/yyyy' }} · {{ formatTime(booking.startTime) }}</p></div>
+          <div><strong>{{ booking.customerName }}</strong><p>{{ booking.serviceName }} · {{ booking.date | date:'dd/MM/yyyy' }} · {{ formatTime(booking.startTime) }}</p><app-booking-contact [booking]="booking" />
+            @if (booking.completionConfirmation === 'REOPENED' && booking.completionAdminNote) { <p class="mt-2 whitespace-pre-wrap text-[#8C3A5A]"><strong>Admin yêu cầu tiếp tục xử lý:</strong> {{ booking.completionAdminNote }}</p> }
+          </div>
           <div class="flex flex-wrap gap-2">
             @if (booking.status === 'pending') {
               <button type="button" [disabled]="bookingService.isUpdating(booking.id)" (click)="acceptBooking(booking.id)" class="rounded bg-[#8C3A5A] px-3 py-2 text-white disabled:opacity-50">Xác nhận</button>
@@ -49,12 +54,13 @@
             }
           </div>
         </div>
-      } @empty { <p>Không có lịch cần xử lý.</p> }
+      } @empty { <p>Không có lịch cần xử lý trong {{ viewMode() === 'day' ? 'ngày' : 'tuần' }} này.</p> }
     </div>
   </details>
 
   <!-- Calendar Body -->
-  <div class="flex-1 overflow-auto flex relative bg-[#FDFBFB]">
+  @if (viewMode() === 'day') {
+  <div class="flex-1 min-h-0 overflow-auto flex relative bg-[#FDFBFB]" aria-label="Lịch trong ngày theo nhân viên">
     
     <!-- Time Column -->
     <div class="w-[80px] shrink-0 border-r border-gray-100 bg-[#FDFBFB] relative z-20">
@@ -92,7 +98,7 @@
           </div>
           
           <!-- Bookings for this staff -->
-          <div class="relative w-full h-[1500px] mt-[90px] z-10">
+          <div class="relative w-full z-10" [style.height.px]="hours.length * hourHeight">
             @for (booking of getBookingsForStaff(staff.id); track booking.id) {
               <!-- Booking Block -->
               <div [id]="'booking-' + booking.id" class="absolute left-2 right-2 rounded-lg shadow-sm bg-white overflow-hidden flex flex-col transition-all duration-200 cursor-pointer group hover:scale-[1.02] hover:shadow-lg hover:z-40"
@@ -105,40 +111,8 @@
                    [class.border-[#F2A4BB]]="booking.status === 'pending'"
                    [class.border]="booking.status === 'confirmed'">
                 
-                <div class="p-3 flex-1 flex flex-col h-full overflow-hidden bg-white group-hover:bg-[#FFFBFD] transition-colors relative">
-                  <div class="flex items-start justify-between mb-1.5">
-                    <span class="inline-block px-2.5 py-0.5 rounded text-[11px] font-semibold tracking-wide"
-                          [class.bg-[#FDF6F8]]="booking.status === 'confirmed'"
-                          [class.text-[#8C3A5A]]="booking.status === 'confirmed'"
-                          [class.text-[#8C3A5A]]="booking.status === 'pending'">
-                      {{ booking.inProgress ? 'Đang thực hiện' : booking.status === 'confirmed' ? 'Đã xác nhận' : 'Yêu cầu đang chờ' }}
-                    </span>
-                    <span class="text-[12px] text-charcoal-800/60 font-medium">{{ formatTime(booking.startTime) }} - {{ formatTime(booking.startTime + booking.duration) }}</span>
-                  </div>
-                  
-                  <div class="font-bold text-[15px] text-charcoal-900 truncate mb-0.5">{{ booking.customerName }}</div>
-                  <div class="text-[13px] text-charcoal-800/70 truncate">{{ booking.serviceName }}</div>
-                  
-                  <!-- Actions for Pending -->
-                  @if (booking.status === 'pending') {
-                    <div class="mt-auto flex justify-end gap-2 pt-2 relative z-50">
-                      <button type="button" title="Từ chối lịch" aria-label="Từ chối lịch" [disabled]="bookingService.isUpdating(booking.id)" (click)="$event.stopPropagation(); rejectBooking(booking.id)" class="w-7 h-7 flex items-center justify-center rounded bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                      </button>
-                      <button type="button" title="Xác nhận lịch" aria-label="Xác nhận lịch" [disabled]="bookingService.isUpdating(booking.id)" (click)="$event.stopPropagation(); acceptBooking(booking.id)" class="w-7 h-7 flex items-center justify-center rounded bg-[#FDF6F8] text-[#8C3A5A] hover:bg-[#F2A4BB] hover:text-white transition-colors disabled:opacity-50">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                      </button>
-                    </div>
-                  }
-                  
-                  @if (booking.status === 'confirmed') {
-                    <div class="mt-auto flex justify-end gap-2 pt-2 relative z-50">
-                      @if (!booking.inProgress) {
-                        <button type="button" title="Bắt đầu thực hiện" aria-label="Bắt đầu thực hiện" [disabled]="bookingService.isUpdating(booking.id)" (click)="$event.stopPropagation(); startBooking(booking.id)" class="w-7 h-7 rounded border border-[#8C3A5A] text-[#8C3A5A] text-xs disabled:opacity-50">▶</button>
-                      }
-                      <button type="button" title="Hoàn thành lịch" aria-label="Hoàn thành lịch" [disabled]="bookingService.isUpdating(booking.id)" (click)="$event.stopPropagation(); completeBooking(booking.id)" class="w-7 h-7 rounded bg-[#8C3A5A] text-white text-xs disabled:opacity-50">✓</button>
-                    </div>
-                  }
+                <div class="p-3 flex-1 flex flex-col h-full overflow-y-auto bg-white group-hover:bg-[#FFFBFD] transition-colors relative">
+                  <ng-container [ngTemplateOutlet]="bookingDetails" [ngTemplateOutletContext]="{ $implicit: booking, showStaff: false }" />
                 </div>
               </div>
             }
@@ -147,74 +121,74 @@
       }
     </div>
   </div>
-</div>
-
-<!-- Add Walk-in Client Sidebar (Overlay & Slide-over) -->
-@if (isSidebarOpen) {
-  <!-- Overlay -->
-  <div class="fixed inset-0 bg-charcoal-900/40 z-[60] transition-opacity" (click)="isSidebarOpen = false"></div>
-  
-  <!-- Sidebar Panel -->
-  <div class="fixed inset-y-0 right-0 w-[420px] bg-[#FDFBFB] shadow-2xl z-[70] flex flex-col transform transition-transform duration-300 ease-in-out translate-x-0 overflow-hidden rounded-l-2xl border-l border-gray-100">
-    
-    <!-- Top Header (Add Client) -->
-    <div class="px-8 py-6 border-b border-gray-100 bg-white flex justify-between items-start shadow-sm z-10">
-      <div class="flex items-center gap-4">
-        <div class="w-12 h-12 rounded-full bg-[#8C3A5A] flex items-center justify-center text-white shrink-0 shadow-sm">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
-        </div>
-        <div>
-          <h2 class="text-xl font-bold text-charcoal-900">Thêm khách hàng</h2>
-          <p class="text-sm text-charcoal-800/60 mt-1">Để trống nếu là khách vãng lai</p>
-        </div>
-      </div>
-      <button (click)="isSidebarOpen = false" class="p-2 text-charcoal-800/40 hover:text-[#8C3A5A] hover:bg-[#FDF6F8] rounded-full transition-colors">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-      </button>
-    </div>
-
-    <!-- Main Content (Select Service) -->
-    <div class="flex-1 overflow-y-auto px-8 py-6 bg-white">
-      <h3 class="text-xl font-bold text-charcoal-900 mb-5">Chọn dịch vụ</h3>
-      
-      <!-- Search Bar -->
-      <div class="relative mb-8 group">
-        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-gray-400 group-focus-within:text-[#8C3A5A] transition-colors"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        </div>
-        <input type="text" placeholder="Tìm tên dịch vụ..." 
-          class="w-full pl-12 pr-4 py-3 bg-[#FDFBFB] border border-gray-200 rounded-xl text-charcoal-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#F2A4BB] focus:border-[#F2A4BB] transition-shadow text-sm"
-          (input)="searchQuery.set($any($event.target).value)"
-        >
-      </div>
-
-      <!-- Service List Grouped by Category -->
-      <div class="space-y-8 pb-10">
-        @for (category of filteredServiceCategories(); track category.name) {
-          <div>
-            <!-- Category Title -->
-            <div class="flex items-center gap-3 mb-4 sticky top-0 bg-white py-2 z-10">
-              <h4 class="text-lg font-bold text-charcoal-900">{{ category.name }}</h4>
-              <span class="bg-gray-100 text-charcoal-800 text-xs font-bold px-2.5 py-0.5 rounded-full">{{ category.count }}</span>
+  } @else {
+    <div class="week-calendar flex-1 min-h-0 overflow-auto" aria-label="Lịch trong tuần từ thứ Hai đến Chủ nhật">
+      <div class="week-columns">
+        @for (day of weekDays(); track day.date) {
+          <section class="week-day" [attr.data-testid]="'week-column-' + day.date" [attr.aria-label]="day.label">
+            <button type="button" class="week-day-heading" [attr.data-testid]="'week-day-' + day.date" [class.selected-day]="day.date === selectedDate()" [attr.aria-label]="'Xem lịch ngày ' + day.label" (click)="openDay(day.date)">
+              <strong>{{ day.label }}</strong><span>{{ getBookingsForDate(day.date).length }} lịch cần xử lý</span>
+            </button>
+            <div class="week-day-bookings">
+              @for (booking of getBookingsForDate(day.date); track booking.id) {
+                <article class="week-booking" [id]="'booking-' + booking.id" [class.pending-booking]="booking.status === 'pending'">
+                  <ng-container [ngTemplateOutlet]="bookingDetails" [ngTemplateOutletContext]="{ $implicit: booking, showStaff: true }" />
+                </article>
+              } @empty { <p class="week-empty">Không có lịch cần xử lý.</p> }
             </div>
-            
-            <!-- Category Services -->
-            <div class="flex flex-col gap-1">
-              @for (service of category.services; track service.name) {
-                <div class="group flex justify-between items-start py-3.5 px-4 border-l-4 border-gray-100 hover:border-[#8C3A5A] bg-white hover:bg-[#FDF6F8] cursor-pointer transition-all rounded-r-lg shadow-sm hover:shadow">
-                  <div>
-                    <h5 class="font-bold text-charcoal-900 group-hover:text-[#8C3A5A] transition-colors">{{ service.name }}</h5>
-                    <p class="text-sm text-charcoal-800/60 mt-0.5 font-medium">{{ service.duration }}</p>
-                  </div>
-                  <span class="font-bold text-charcoal-900 text-sm bg-gray-50 group-hover:bg-white px-2 py-1 rounded transition-colors">{{ service.price }}</span>
-                </div>
-              }
-            </div>
-          </div>
+          </section>
         }
       </div>
     </div>
-    
+  }
+</div>
+
+<ng-template #bookingDetails let-booking let-showStaff="showStaff">
+  <div class="flex flex-wrap items-start justify-between gap-1 mb-1.5">
+    <span class="inline-block px-2.5 py-0.5 rounded text-[11px] font-semibold tracking-wide bg-[#FDF6F8] text-[#8C3A5A]">
+      {{ booking.inProgress ? 'Đang thực hiện' : booking.status === 'confirmed' ? 'Đã xác nhận' : 'Yêu cầu đang chờ' }}
+    </span>
+    <span class="text-[12px] text-charcoal-800/60 font-medium">{{ formatTime(booking.startTime) }} - {{ formatTime(booking.startTime + booking.duration) }}</span>
   </div>
+  <div class="font-bold text-[15px] text-charcoal-900 truncate mb-0.5">{{ booking.customerName }}</div>
+  <div class="text-[13px] text-charcoal-800/70 truncate">{{ booking.serviceName }}</div>
+  @if (showStaff) { <p class="text-xs text-charcoal-800/60 mt-1">Nhân viên: {{ staffName(booking.staffId) }}</p> }
+  <app-booking-contact [booking]="booking" [compact]="true" />
+  @if (booking.completionConfirmation === 'REOPENED' && booking.completionAdminNote) { <p class="mt-2 whitespace-pre-wrap text-xs text-[#8C3A5A]">Admin: {{ booking.completionAdminNote }}</p> }
+  @if (booking.status === 'pending') {
+    <div class="mt-auto flex justify-end gap-2 pt-2 relative z-50">
+      <button type="button" title="Từ chối lịch" aria-label="Từ chối lịch" [disabled]="bookingService.isUpdating(booking.id)" (click)="$event.stopPropagation(); rejectBooking(booking.id)" class="w-7 h-7 flex items-center justify-center rounded bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+      <button type="button" title="Xác nhận lịch" aria-label="Xác nhận lịch" [disabled]="bookingService.isUpdating(booking.id)" (click)="$event.stopPropagation(); acceptBooking(booking.id)" class="w-7 h-7 flex items-center justify-center rounded bg-[#FDF6F8] text-[#8C3A5A] hover:bg-[#F2A4BB] hover:text-white transition-colors disabled:opacity-50">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      </button>
+    </div>
+  }
+  @if (booking.status === 'confirmed') {
+    <div class="mt-auto flex justify-end gap-2 pt-2 relative z-50">
+      @if (!booking.inProgress) {
+        <button type="button" title="Bắt đầu thực hiện" aria-label="Bắt đầu thực hiện" [disabled]="bookingService.isUpdating(booking.id)" (click)="$event.stopPropagation(); startBooking(booking.id)" class="w-7 h-7 rounded border border-[#8C3A5A] text-[#8C3A5A] text-xs disabled:opacity-50">▶</button>
+      }
+      <button type="button" title="Hoàn thành lịch" aria-label="Hoàn thành lịch" [disabled]="bookingService.isUpdating(booking.id)" (click)="$event.stopPropagation(); completeBooking(booking.id)" class="w-7 h-7 rounded bg-[#8C3A5A] text-white text-xs disabled:opacity-50">✓</button>
+    </div>
+  }
+</ng-template>
+
+<!-- Add Walk-in Client Sidebar -->
+@if (isSidebarOpen) {
+  <button type="button" aria-label="Đóng form khách vãng lai" [disabled]="walkInSaving()" class="fixed inset-0 w-full bg-charcoal-900/40 z-[60]" (click)="isSidebarOpen = false"></button>
+  <section role="dialog" aria-modal="true" aria-labelledby="walk-in-heading" (keydown.escape)="!walkInSaving() && (isSidebarOpen = false)"
+    cdkTrapFocus [cdkTrapFocusAutoCapture]="true"
+    class="fixed inset-y-0 right-0 w-full max-w-[420px] bg-white shadow-2xl z-[70] flex flex-col overflow-hidden rounded-l-2xl border-l border-gray-100">
+    <div class="px-6 py-5 border-b border-gray-100 flex justify-between items-center">
+      <h2 id="walk-in-heading" class="text-xl font-bold text-[#8C3A5A]">Thêm khách vãng lai</h2>
+      <button type="button" aria-label="Đóng" [disabled]="walkInSaving()" (click)="isSidebarOpen = false" class="p-2 text-gray-500 rounded-full hover:bg-[#FDF6F8]">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="m6 6 12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="flex-1 overflow-y-auto">
+      <app-walk-in-form [services]="walkInServices()" [employees]="walkInEmployees()" (busy)="walkInSaving.set($event)" (saved)="walkInSaved($event)" />
+    </div>
+  </section>
 }
-@if (error()) { <p role="alert" class="text-red-700 p-4">{{ error() }}</p> }

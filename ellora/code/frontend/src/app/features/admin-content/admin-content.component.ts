@@ -1,14 +1,12 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { AdminContentApiService, AdminContent, AdminSalon, ContentPage } from '../../services/admin-content-api.service';
 import { OwnerReview, ownerError } from '../../services/owner-api.service';
 import { PhotoUpload } from '../../shared/components/photo-upload.component';
-import { AdminNavigationComponent } from './admin-navigation.component';
 
-@Component({standalone:true, imports:[CommonModule,FormsModule,RouterLink,PhotoUpload,AdminNavigationComponent],
-  templateUrl:'./admin-content.component.html', styleUrl:'../owner/owner-data.scss'})
+@Component({standalone:true, imports:[CommonModule,FormsModule,PhotoUpload],
+  templateUrl:'./admin-content.component.html', styleUrl:'./admin-page.scss'})
 export class AdminContentComponent implements OnInit {
   private api=inject(AdminContentApiService);
   salons=signal<ContentPage<AdminSalon>|null>(null);

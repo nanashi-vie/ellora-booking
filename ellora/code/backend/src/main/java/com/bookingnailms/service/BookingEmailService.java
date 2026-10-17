@@ -24,6 +24,7 @@ public class BookingEmailService {
     // Saved in the booking transaction: rolled-back bookings never produce email.
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
     public void enqueue(Booking booking, boolean confirmed) {
+        if (booking.getCustomer() == null) return;
         BookingEmail email = new BookingEmail();
         email.setBookingId(booking.getId());
         email.setKind(confirmed ? "CONFIRMED" : "NEW_BOOKING");

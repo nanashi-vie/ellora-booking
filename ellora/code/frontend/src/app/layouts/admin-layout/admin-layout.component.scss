@@ -1,0 +1,18 @@
+:host { display: block; min-width: 0; }
+.admin-layout {
+  min-height: 100dvh;
+  padding: 112px 0 48px;
+  background: #fdfbf7;
+  color: #302c2d;
+}
+.admin-layout-frame {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1280px;
+  min-width: 0;
+  margin: 0 auto;
+  padding: 24px 16px 0;
+}
+.admin-layout-content { min-width: 0; }
+@media (min-width: 640px) { .admin-layout-frame { padding-inline: 24px; } }
+@media (min-width: 1024px) { .admin-layout-frame { padding-inline: 32px; } }

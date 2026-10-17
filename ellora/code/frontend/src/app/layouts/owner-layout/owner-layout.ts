@@ -3,10 +3,11 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { BookingService } from '../../services/booking.service';
+import { BookingContactComponent } from '../../shared/components/booking-contact.component';
 @Component({
   selector: 'app-owner-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule, BookingContactComponent],
   templateUrl: './owner-layout.html',
   styleUrl: './owner-layout.css',
 })

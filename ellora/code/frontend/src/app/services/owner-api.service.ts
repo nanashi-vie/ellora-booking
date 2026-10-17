@@ -49,6 +49,7 @@ export interface OwnerRevenueReport {
   points: OwnerRevenuePoint[];
 }
 export interface OwnerWorkingHour { dayOfWeek: string; openTime: string | null; closeTime: string | null; closed: boolean; }
+export interface OwnerClosure { id: number; date: string; reason: string; }
 export interface OwnerPage<T> {
   content: T[];
   pageNumber: number;
@@ -104,6 +105,11 @@ export class OwnerApiService {
   async saveWorkingHours(hours: OwnerWorkingHour[]) {
     return (await firstValueFrom(this.http.put<{data:OwnerWorkingHour[]}>(`${this.base}/salon/working-hours`,hours))).data;
   }
+  closures() { return this.get<OwnerClosure[]>('salon/closures'); }
+  async closeDate(date: string, reason: string) {
+    return (await firstValueFrom(this.http.post<{ data: OwnerClosure }>(`${this.base}/salon/closures`, { date, reason }))).data;
+  }
+  async reopenDate(id: number) { await firstValueFrom(this.http.delete(`${this.base}/salon/closures/${id}`)); }
   async saveSalon(data: {name:string;description:string;address:string;city:string;district:string;phone:string;email:string}) {
     return (await firstValueFrom(this.http.put<{data:SalonProfileChange}>(`${this.base}/salon`,data))).data;
   }

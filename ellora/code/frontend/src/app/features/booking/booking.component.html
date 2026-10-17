@@ -156,10 +156,11 @@
                 type="button"
                 class="calendar-day"
                 [class.calendar-day--other-month]="!day.isCurrentMonth"
-                [class.calendar-day--past]="day.isPast"
+                [class.calendar-day--past]="day.isPast || isClosed(day.fullDate)"
                 [class.calendar-day--selected]="selectedDate() === day.fullDate"
-                [disabled]="day.isPast || !day.isCurrentMonth"
-                (click)="selectedDate.set(day.fullDate); selectedTime.set(null)"
+                [disabled]="day.isPast || !day.isCurrentMonth || isClosed(day.fullDate) || closuresLoading() || !!closuresError()"
+                [attr.title]="isClosed(day.fullDate) ? 'Tiệm đóng cửa' : null"
+                (click)="selectDate(day.fullDate)"
               >{{ day.date }}</button>
             }
           </div>
@@ -167,28 +168,46 @@
 
         <!-- Time slots side -->
         <div class="timeslot-side">
+          @if (closuresLoading()) { <p role="status">Đang kiểm tra ngày nghỉ…</p> }
+          @else if (closuresError()) { <p role="alert">{{ closuresError() }}</p><button type="button" (click)="loadClosedDates()">Thử lại</button> }
+          @else if (!selectedDate()) { <p>Chọn ngày để xem giờ còn trong thời gian mở cửa. Ngày tiệm đóng cửa không thể đặt lịch.</p> }
+          @else if (!timeRange()) { <p>Không còn giờ hẹn phù hợp trong ngày này. Vui lòng chọn ngày khác; lịch cần cách hiện tại ít nhất 1 tiếng.</p> }
+          @if (timeRange(); as range) {
+            <div class="custom-time">
+              <label for="customer-booking-time">Giờ bạn muốn đến</label>
+              <input id="customer-booking-time" type="time" step="60" [min]="range.min" [max]="range.max"
+                [value]="selectedTime() || ''" (focus)="refreshBookingTime()" (input)="selectTime($any($event.target).value)"
+                [attr.aria-invalid]="selectedTime() && !selectedTimeValid() ? true : null" aria-describedby="customer-time-help">
+              <p id="customer-time-help">Chọn từ {{ range.min }} đến {{ range.max }}, tùy chọn từng phút. Giờ hẹn cách hiện tại ít nhất 1 tiếng (giờ Việt Nam).</p>
+              @if (selectedTime() && !selectedTimeValid()) { <p role="alert" class="custom-time-error">Giờ đã chọn nằm ngoài khoảng có thể đặt. Vui lòng chọn lại.</p> }
+            </div>
+          }
+          @if (morningSlots().length) {
           <div class="timeslot-group">
             <p class="timeslot-group-label">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               SÁNG
             </p>
             <div class="timeslot-grid">
-              @for (t of morningSlots; track t) {
-                <button type="button" class="timeslot" [class.timeslot--selected]="selectedTime() === t" (click)="selectedTime.set(t)">{{ t }}</button>
+              @for (t of morningSlots(); track t) {
+                <button type="button" class="timeslot" [class.timeslot--selected]="selectedTime() === t" (click)="selectTime(t)">{{ t }}</button>
               }
             </div>
           </div>
+          }
+          @if (afternoonSlots().length) {
           <div class="timeslot-group">
             <p class="timeslot-group-label">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
               CHIỀU
             </p>
             <div class="timeslot-grid">
-              @for (t of afternoonSlots; track t) {
-                <button type="button" class="timeslot" [class.timeslot--selected]="selectedTime() === t" (click)="selectedTime.set(t)">{{ t }}</button>
+              @for (t of afternoonSlots(); track t) {
+                <button type="button" class="timeslot" [class.timeslot--selected]="selectedTime() === t" (click)="selectTime(t)">{{ t }}</button>
               }
             </div>
           </div>
+          }
         </div>
       </div>
     </div>
@@ -217,7 +236,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
             Quay lại
           </button>
-          <button type="button" class="btn-continue" [disabled]="!selectedDate() || !selectedTime()" (click)="nextStep()">
+          <button type="button" class="btn-continue" [disabled]="!selectedTimeValid()" (click)="nextStep()">
             Tiếp tục: Xác nhận <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </button>
         </div>
@@ -271,8 +290,8 @@
               <input type="text" formControlName="fullName" class="confirm-form__input" placeholder="Nhập tên của bạn" />
             </div>
             <div class="confirm-form__field">
-              <label class="confirm-form__label">SỐ ĐIỆN THOẠI</label>
-              <input type="tel" formControlName="phone" class="confirm-form__input" placeholder="090 123 4567" />
+              <label for="booking-phone" class="confirm-form__label">SỐ ĐIỆN THOẠI</label>
+              <input id="booking-phone" type="tel" formControlName="phone" class="confirm-form__input" placeholder="090 123 4567" maxlength="20" autocomplete="tel" />
             </div>
           </div>
           <div class="confirm-form__field">
