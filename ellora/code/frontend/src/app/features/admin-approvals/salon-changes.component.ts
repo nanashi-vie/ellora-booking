@@ -3,29 +3,30 @@ import { SalonChangePage, SalonProfileChange, SalonRegistrationService } from '.
 import { SalonChangePreviewComponent } from '../../shared/components/salon-change-preview.component';
 import { HttpErrorResponse } from '@angular/common/http';
 
-@Component({selector:'app-admin-salon-changes',standalone:true,imports:[SalonChangePreviewComponent],template:`
- <section class="mb-10" aria-label="Duyệt cập nhật hồ sơ salon">
-  <h2 class="font-serif text-2xl mb-4">Yêu cầu cập nhật thông tin và ảnh</h2>
-  <p class="mb-4">Duyệt để áp dụng thay đổi. Từ chối sẽ giữ nguyên hồ sơ đang hiển thị.</p>
-  @if(error()){<p role="alert" class="text-red-700 mb-4">{{error()}}</p>}
-  @if(message()){<p role="status" class="text-green-800 mb-4">{{message()}}</p>}
-  <button type="button" (click)="load()" [disabled]="busy()" class="underline mb-4">Tải lại yêu cầu cập nhật</button>
+@Component({selector:'app-admin-salon-changes',standalone:true,imports:[SalonChangePreviewComponent],styleUrl:'../admin-content/admin-page.scss',template:`
+ <section class="admin-page" aria-label="Duyệt cập nhật hồ sơ salon">
+  <header class="admin-page-header">
+   <div><h1>Duyệt thông tin, ảnh và vị trí salon</h1><p>Duyệt để áp dụng thay đổi. Từ chối sẽ giữ nguyên hồ sơ đang hiển thị.</p></div>
+   <button type="button" (click)="load()" [disabled]="busy()">Tải lại yêu cầu cập nhật</button>
+  </header>
+  @if(error()){<p role="alert" class="error">{{error()}}</p>}
+  @if(message()){<p role="status" class="success">{{message()}}</p>}
   @if(busy()){<p role="status">Đang xử lý…</p>}
   @for(change of page()?.content;track change.id){
-   <article class="border rounded-xl bg-white p-4 mb-4">
-    <h3 class="font-semibold text-lg">{{change.salonName}}</h3>
+   <article class="card">
+    <h2>{{change.salonName}}</h2>
     <p>{{change.kind === 'PROFILE' ? 'Thông tin tiệm' : change.kind === 'COVER' ? 'Ảnh đại diện' : 'Bộ ảnh salon'}}</p>
     <button type="button" class="underline my-3" (click)="selected.set(selected()?.id === change.id ? null : change)" [disabled]="busy()">{{selected()?.id === change.id ? 'Thu gọn' : 'Xem thay đổi'}}</button>
     @if(selected()?.id === change.id){
      <app-salon-change-preview [change]="change"/>
-     <div class="flex flex-wrap gap-3 mt-5">
-      <button type="button" (click)="decide(change,'approve')" [disabled]="busy()" class="bg-charcoal-900 text-white px-5 py-3 rounded disabled:opacity-50">Duyệt cập nhật</button>
-      <button type="button" (click)="decide(change,'reject')" [disabled]="busy()" class="border text-red-700 px-5 py-3 rounded disabled:opacity-50">Từ chối cập nhật</button>
+     <div class="actions mt-5">
+      <button type="button" (click)="decide(change,'approve')" [disabled]="busy()" class="primary">Duyệt cập nhật</button>
+      <button type="button" (click)="decide(change,'reject')" [disabled]="busy()" class="danger">Từ chối cập nhật</button>
      </div>
     }
    </article>
   } @empty {@if(page() && !busy()){<p>Không có yêu cầu cập nhật chờ duyệt.</p>}}
-  <div class="flex gap-5 mt-4">
+  <div class="pager">
    <button type="button" (click)="move(-1)" [disabled]="busy()||pageNumber()===0" class="disabled:opacity-40">Trang trước</button>
    <span>Trang {{pageNumber()+1}}</span>
    <button type="button" (click)="move(1)" [disabled]="busy()||!page()||page()?.last" class="disabled:opacity-40">Trang sau</button>

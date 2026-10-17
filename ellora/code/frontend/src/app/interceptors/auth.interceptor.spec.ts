@@ -48,6 +48,30 @@ describe('API authentication cost', () => {
     request.flush({}); await result;
   });
 
+  it('sends only the exact guest POST immediately without a Cognito lookup', async () => {
+    auth.getAccessToken.mockReturnValue(new Promise(() => {}));
+    const result = firstValueFrom(http.post(apiConfig.baseUrl + '/bookings/guest', { email: 'mai@example.com' }));
+    const request = requests.expectOne(apiConfig.baseUrl + '/bookings/guest');
+    expect(request.request.headers.has('Authorization')).toBe(false);
+    expect(auth.getAccessToken).not.toHaveBeenCalled();
+    request.flush({}); await result;
+  });
+
+  it('keeps regular booking writes and guest lookalike paths authenticated', async () => {
+    for (const path of ['/bookings', '/bookings/guest-other', '/bookings/guest/1']) {
+      const result = firstValueFrom(http.post(apiConfig.baseUrl + path, {}));
+      await Promise.resolve();
+      const request = requests.expectOne(apiConfig.baseUrl + path);
+      expect(request.request.headers.get('Authorization')).toBe('Bearer test-token');
+      request.flush({}); await result;
+    }
+    const result = firstValueFrom(http.get(apiConfig.baseUrl + '/bookings/guest'));
+    await Promise.resolve();
+    const request = requests.expectOne(apiConfig.baseUrl + '/bookings/guest');
+    expect(request.request.headers.get('Authorization')).toBe('Bearer test-token');
+    request.flush({}); await result;
+  });
+
   it('does not send credentials to an external site', async () => {
     const result = firstValueFrom(http.get('https://example.com/data'));
     const request = requests.expectOne('https://example.com/data');

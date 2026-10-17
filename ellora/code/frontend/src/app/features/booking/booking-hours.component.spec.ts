@@ -17,6 +17,7 @@ describe('Customer booking hours and closed dates', () => {
       { provide: ActivatedRoute, useValue: {} }, { provide: Router, useValue: {} }, { provide: AuthService, useValue: {} }
     ] });
     component = TestBed.runInInjectionContext(() => new BookingComponent());
+    component.authReady.set(true);
     component.services.set([{ id: '2', name: 'Sơn gel', salonId: '1', description: '', price: 150000, durationMinutes: 60 }]);
     component.selectedServiceIds.set(['2']); component.selectedDate.set('2026-10-12');
     component.workingHours.set([{ dayOfWeek: 'MONDAY', openTime: '09:00:00', closeTime: '19:00:00', closed: false }]);

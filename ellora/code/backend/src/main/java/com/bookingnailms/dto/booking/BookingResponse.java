@@ -20,6 +20,7 @@ public class BookingResponse {
     private String salonLogoUrl;
     private String customerName;
     private String customerPhone;
+    private String customerEmail;
     private boolean walkIn;
     private Long serviceId;
     private String serviceName;

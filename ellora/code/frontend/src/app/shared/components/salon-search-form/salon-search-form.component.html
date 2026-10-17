@@ -1,0 +1,41 @@
+<form class="salon-search-form" [class.salon-search-form--compact]="compact()" [formGroup]="form" (ngSubmit)="submit()" aria-label="Tìm kiếm salon">
+  <div class="salon-search-fields">
+    <label [for]="id + '-keyword'">Tiệm hoặc dịch vụ
+      <input [id]="id + '-keyword'" type="search" formControlName="keyword" maxlength="255" placeholder="Tên tiệm, sơn gel…" autocomplete="off" cdkFocusInitial>
+    </label>
+    <label [for]="id + '-location'">Khu vực
+      <input [id]="id + '-location'" type="search" formControlName="location" maxlength="255" placeholder="Quận, thành phố, địa chỉ…" autocomplete="off">
+    </label>
+    <label [for]="id + '-date'">Ngày mở cửa
+      <input [id]="id + '-date'" type="date" formControlName="date" [min]="today()" [max]="latestDate()" (focus)="refreshClock()" (change)="refreshClock()" [attr.aria-describedby]="id + '-time-help'">
+    </label>
+    <label [for]="id + '-time'">Giờ (tùy chọn)
+      <input [id]="id + '-time'" type="time" formControlName="time" step="60" (focus)="refreshClock()" (change)="refreshClock()" [attr.aria-describedby]="id + '-time-help'">
+    </label>
+  </div>
+  <div class="salon-search-actions">
+    <div class="salon-search-nearby">
+      <button type="button" class="salon-search-position" (click)="useLocation()" [disabled]="search.locating()">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>
+        {{ search.locating() ? 'Đang lấy vị trí…' : 'Dùng vị trí của tôi' }}
+      </button>
+      @if (form.controls.nearby.value) {
+        <span class="salon-search-position-status" role="status">{{ search.coordinates() ? 'Đang dùng vị trí của bạn' : 'Cần vị trí để tìm gần bạn' }}</span>
+        <label class="salon-search-radius" [for]="id + '-radius'">Bán kính
+          <select [id]="id + '-radius'" formControlName="radiusKm">
+            @if (!radiusOptions.includes(form.controls.radiusKm.value)) { <option [ngValue]="form.controls.radiusKm.value">{{ form.controls.radiusKm.value }} km</option> }
+            @for (radius of radiusOptions; track radius) { <option [ngValue]="radius">{{ radius }} km</option> }
+          </select>
+        </label>
+        <button type="button" class="salon-search-clear-position" (click)="stopNearby()">Bỏ gần bạn</button>
+      }
+    </div>
+    <button type="submit" class="salon-search-submit" [disabled]="submitting() || search.locating()">{{ submitting() ? 'Đang tìm…' : 'Tìm kiếm' }}</button>
+  </div>
+  <p class="salon-search-help" [id]="id + '-time-help'">Theo giờ Việt Nam. Bộ lọc kiểm tra giờ mở cửa, chưa xác nhận chỗ trống.</p>
+  @if (form.touched && form.hasError('dateRequired')) { <p role="alert" class="salon-search-error">Chọn ngày khi tìm theo giờ.</p> }
+  @if (form.touched && form.hasError('dateRange')) { <p role="alert" class="salon-search-error">Chọn ngày từ hôm nay đến một năm tới.</p> }
+  @if (form.touched && (form.hasError('timeTooSoon') || form.hasError('timeFormat'))) { <p role="alert" class="salon-search-error">Chọn giờ hợp lệ, cách hiện tại ít nhất một tiếng.</p> }
+  @if (locationAttempted() && search.error()) { <p role="alert" class="salon-search-error">{{ search.error() }}</p> }
+  @if (error()) { <p role="alert" class="salon-search-error">{{ error() }}</p> }
+</form>

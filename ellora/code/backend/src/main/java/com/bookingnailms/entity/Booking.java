@@ -31,6 +31,9 @@ public class Booking {
     @Column(length = 255)
     private String walkInName;
 
+    @Column(length = 255)
+    private String guestEmail;
+
     @Column(name = "walk_in_phone", length = 20)
     private String customerPhone;
 
@@ -108,4 +111,10 @@ public class Booking {
 
     @LastModifiedDate
     private LocalDateTime updatedAt;
+
+    public boolean isWalkIn() { return customer == null && (guestEmail == null || guestEmail.isBlank()); }
+    public String contactEmail() { return customer == null ? guestEmail : customer.getEmail(); }
+    public String contactName() {
+        return customer == null ? (walkInName == null ? "Khách vãng lai" : walkInName) : customer.getFullName();
+    }
 }

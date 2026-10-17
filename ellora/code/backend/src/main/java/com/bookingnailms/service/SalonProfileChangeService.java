@@ -5,6 +5,7 @@ import com.bookingnailms.dto.salon.*;
 import com.bookingnailms.entity.*;
 import com.bookingnailms.entity.SalonProfileChange.Status;
 import com.bookingnailms.exception.ResourceNotFoundException;
+import com.bookingnailms.exception.BadRequestException;
 import com.bookingnailms.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -27,13 +28,16 @@ public class SalonProfileChangeService {
 
     @Transactional
     public SalonProfileChangeResponse submit(UUID owner, SalonRequest request) {
+        requireValidCoordinates(request);
         Salon owned = owned(owner);
         Salon salon = salons.findForUpdateById(owned.getId()).orElseThrow(() -> missing());
         entityManager.refresh(salon);
         requireNoPending(salon.getId());
         SalonRequest proposed = new SalonRequest(trim(request.getName()), trim(request.getDescription()),
                 trim(request.getAddress()), trim(request.getCity()), trim(request.getDistrict()),
-                trim(request.getPhone()), trim(request.getEmail()));
+                trim(request.getPhone()), trim(request.getEmail()),
+                request.getLatitude() == null ? salon.getLatitude() : request.getLatitude(),
+                request.getLongitude() == null ? salon.getLongitude() : request.getLongitude());
         if (snapshot(salon).equals(proposed)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Thông tin chưa có thay đổi.");
         }
@@ -90,9 +94,14 @@ public class SalonProfileChangeService {
         }
         if (approve && change.getKind() == Kind.PROFILE) {
             SalonRequest p = change.getProposed();
+            requireValidCoordinates(p);
             salon.setName(p.getName()); salon.setDescription(p.getDescription());
             salon.setAddress(p.getAddress()); salon.setCity(p.getCity()); salon.setDistrict(p.getDistrict());
             salon.setPhone(p.getPhone()); salon.setEmail(p.getEmail());
+            // Older pending JSON has no coordinates; approval must preserve the existing pin.
+            if (p.getLatitude() != null) {
+                salon.setLatitude(p.getLatitude()); salon.setLongitude(p.getLongitude());
+            }
             salons.save(salon);
         }
         if (approve && change.getKind() != Kind.PROFILE) {
@@ -115,9 +124,13 @@ public class SalonProfileChangeService {
     }
     private static ResourceNotFoundException missing() { return new ResourceNotFoundException("Không tìm thấy yêu cầu hoặc salon."); }
     private static String trim(String value) { return value == null ? "" : value.trim(); }
+    private static void requireValidCoordinates(SalonRequest request) {
+        if (!request.isCoordinatesValid()) throw new BadRequestException("Vui lòng chọn đủ vĩ độ và kinh độ hợp lệ.");
+    }
     private SalonRequest snapshot(Salon s) {
         return new SalonRequest(trim(s.getName()), trim(s.getDescription()), trim(s.getAddress()),
-                trim(s.getCity()), trim(s.getDistrict()), trim(s.getPhone()), trim(s.getEmail()));
+                trim(s.getCity()), trim(s.getDistrict()), trim(s.getPhone()), trim(s.getEmail()),
+                s.getLatitude(), s.getLongitude());
     }
     private SalonProfileChangeResponse response(SalonProfileChange c) {
         return new SalonProfileChangeResponse(c.getId(), c.getSalon().getId(), c.getSalon().getName(),

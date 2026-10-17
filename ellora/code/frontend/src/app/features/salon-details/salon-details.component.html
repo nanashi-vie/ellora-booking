@@ -57,30 +57,22 @@
         <!-- ═══ Vị trí ═══ -->
         <section class="location-section">
           <h2 class="section-title">Vị trí</h2>
-          <div class="location-card">
-            <div class="location-card__map">
-              <div class="location-card__map-placeholder">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.3">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
-                  <circle cx="12" cy="10" r="3"/>
-                </svg>
-              </div>
-            </div>
+          <div class="location-card" [class.location-card--with-map]="!!currentSalon.coordinates">
+            @if (currentSalon.coordinates; as point) {
+              <app-public-salon-map [coordinates]="point" />
+            }
             <div class="location-card__info">
-              <span class="location-card__label">Địa chỉ</span>
-              <h3 class="location-card__area">SoHo, New York</h3>
-              <p class="location-card__address">{{ currentSalon.address }}, {{ currentSalon.city }}</p>
-              <a
-                class="location-card__directions"
-                [href]="getGoogleMapsUrl()"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <span class="location-card__label">Địa chỉ tiệm</span>
+              @if (locationArea()) { <h3 class="location-card__area">{{ locationArea() }}</h3> }
+              <p class="location-card__address">{{ fullAddress() || 'Salon chưa cập nhật địa chỉ.' }}</p>
+              @if (directionsUrl(); as directions) {
+              <a class="location-card__directions" [href]="directions" target="_blank" rel="noopener noreferrer">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                   <polygon points="3 11 22 2 13 21 11 13 3 11"/>
                 </svg>
                 Nhận chỉ đường
               </a>
+              }
             </div>
           </div>
         </section>
@@ -185,7 +177,7 @@
                   </div>
                 </div>
               }
-              @if (selectedServices()[0]; as chosenService) { <p class="text-sm text-charcoal-800/70">Đã chọn: {{ chosenService.name }}</p> }
+              @if (selectedServices()[0]; as chosenService) { <p class="booking-widget__selected-service">Đã chọn: {{ chosenService.name }}</p> }
               <a class="booking-widget__cta" routerLink="/booking" [queryParams]="{ salonId: currentSalon.id, serviceId: selectedServices()[0]?.id }">Đặt lịch ngay</a>
             </div>
 
@@ -220,10 +212,15 @@
                   <path d="M20 10c0 5.5-8 11-8 11s-8-5.5-8-11a8 8 0 1 1 16 0Z"/>
                   <circle cx="12" cy="10" r="2.5"/>
                 </svg>
-                <p>
-                  SPA VIỆT I MASSAGE CỔ VAI GÁY - FOOT &amp; BODY MASSAGE - GỘI DƯỠNG SINH, Phường 11, Ho Chi Minh City, 79/1 Đường Trần Huy Liệu, Hồ Chí Minh
-                  <a [href]="getGoogleMapsUrl()" target="_blank" rel="noopener noreferrer">Get directions</a>
-                </p>
+                <div class="booking-widget__address-content">
+                  <span class="booking-widget__address-label">Địa chỉ tiệm</span>
+                  <p>{{ fullAddress() || 'Salon chưa cập nhật địa chỉ.' }}</p>
+                  @if (directionsUrl(); as directions) {
+                    <a [href]="directions" target="_blank" rel="noopener noreferrer">Nhận chỉ đường
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                    </a>
+                  }
+                </div>
               </div>
             </div>
           </div>
@@ -231,7 +228,7 @@
       </div>
 
       <section class="venues-nearby-section">
-        <h2 class="venues-nearby-section__title">Venues nearby</h2>
+        <h2 class="venues-nearby-section__title">{{ currentSalon.coordinates ? 'Salon lân cận' : 'Khám phá thêm salon' }}</h2>
         <div class="venues-nearby-grid">
           @for (nearbySalon of nearbySalons(); track nearbySalon.id) {
             <a class="venue-card" [routerLink]="['/salon', nearbySalon.id]">
@@ -255,11 +252,12 @@
                   <span>{{ nearbySalon.rating }}</span>
                 </div>
                 <p class="venue-card__address">{{ nearbySalon.city }}, {{ nearbySalon.address }}</p>
-                <p class="venue-card__meta">Nail Salon · {{ nearbySalon.reviewCount }} reviews</p>
+                <p class="venue-card__meta">{{ nearbySalon.reviewCount }} đánh giá @if (nearbySalon.distance !== undefined) { · Cách tiệm này khoảng {{ nearbySalon.distance | number:'1.1-1' }} km }</p>
               </div>
             </a>
           }
         </div>
+        @if (!nearbySalons().length) { <p>Chưa có salon khác phù hợp trong khu vực này.</p> }
       </section>
 
     </div>

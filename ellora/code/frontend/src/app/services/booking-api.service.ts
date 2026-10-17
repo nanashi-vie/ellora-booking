@@ -19,6 +19,20 @@ export interface BookingStatusUpdateRequest {
   salonNote?: string;
 }
 
+export interface GuestBookingRequest extends Omit<BookingCreateRequest, 'customerPhone'> {
+  fullName: string;
+  phone: string;
+  email: string;
+}
+
+export interface GuestBookingReceipt {
+  id: number;
+  status: BookingStatus;
+  scheduledAt: string;
+  salonName: string;
+  serviceName: string;
+}
+
 export interface WalkInBookingRequest {
   serviceId: number; employeeId?: number; scheduledAt: string;
   customerName?: string; customerPhone?: string; customerNote?: string;
@@ -100,6 +114,10 @@ export class BookingApiService {
       this.http.post<ApiResponse<BookingItem>>(`${this.base}/bookings`, request)
     );
     return res.data;
+  }
+
+  async createGuestBooking(request: GuestBookingRequest): Promise<GuestBookingReceipt> {
+    return (await firstValueFrom(this.http.post<ApiResponse<GuestBookingReceipt>>(`${this.base}/bookings/guest`, request))).data;
   }
 
   /** Lấy danh sách booking của tôi (customer) */

@@ -19,4 +19,8 @@ public class SalonSummaryResponse {
     private String logoUrl;
     private BigDecimal averageRating;
     private Integer totalReviews;
+    private String district;
+    private Double latitude;
+    private Double longitude;
+    private Double distanceKm;
 }

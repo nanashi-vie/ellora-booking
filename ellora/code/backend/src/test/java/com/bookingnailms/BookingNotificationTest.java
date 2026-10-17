@@ -23,7 +23,7 @@ class BookingNotificationTest {
     @Test void sendsPlainTextAndHtmlAlternatives() throws Exception {
         BookingEmailRepository repository = mock(BookingEmailRepository.class);
         JavaMailSender sender = mock(JavaMailSender.class);
-        BookingEmailService service = new BookingEmailService(repository, sender);
+        BookingEmailService service = new BookingEmailService(repository, sender, mock(BookingRepository.class));
         ReflectionTestUtils.setField(service, "enabled", true);
         ReflectionTestUtils.setField(service, "from", "sender@example.com");
         BookingEmail email = new BookingEmail();
@@ -83,7 +83,7 @@ class BookingNotificationTest {
 
     @Test void routesNewBookingToSalonAndConfirmationToCustomer() {
         BookingEmailRepository repository = mock(BookingEmailRepository.class);
-        BookingEmailService service = new BookingEmailService(repository, mock(JavaMailSender.class));
+        BookingEmailService service = new BookingEmailService(repository, mock(JavaMailSender.class), mock(BookingRepository.class));
         Booking booking = booking();
         service.enqueue(booking, false);
         booking.getSalon().setEmail("salon@example.com");
@@ -100,7 +100,7 @@ class BookingNotificationTest {
     @Test void failedMailStaysQueuedAndCanSucceedOnRetry() {
         BookingEmailRepository repository = mock(BookingEmailRepository.class);
         JavaMailSender sender = mock(JavaMailSender.class);
-        BookingEmailService service = new BookingEmailService(repository, sender);
+        BookingEmailService service = new BookingEmailService(repository, sender, mock(BookingRepository.class));
         ReflectionTestUtils.setField(service, "enabled", true);
         ReflectionTestUtils.setField(service, "from", "sender@example.com");
         BookingEmail email = new BookingEmail(); email.setRecipient("customer@example.com");

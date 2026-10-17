@@ -110,7 +110,7 @@ export class OwnerApiService {
     return (await firstValueFrom(this.http.post<{ data: OwnerClosure }>(`${this.base}/salon/closures`, { date, reason }))).data;
   }
   async reopenDate(id: number) { await firstValueFrom(this.http.delete(`${this.base}/salon/closures/${id}`)); }
-  async saveSalon(data: {name:string;description:string;address:string;city:string;district:string;phone:string;email:string}) {
+  async saveSalon(data: {name:string;description:string;address:string;city:string;district:string;phone:string;email:string;latitude?:number|null;longitude?:number|null}) {
     return (await firstValueFrom(this.http.put<{data:SalonProfileChange}>(`${this.base}/salon`,data))).data;
   }
   salonChange() { return this.get<SalonProfileChange|null>('salon/change-request'); }

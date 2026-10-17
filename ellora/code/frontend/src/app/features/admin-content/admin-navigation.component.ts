@@ -9,7 +9,8 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
     <nav aria-label="Điều hướng quản trị">
       <a routerLink="/admin/dashboard" routerLinkActive="is-active" ariaCurrentWhenActive="page" [routerLinkActiveOptions]="{ exact: true }">Tổng quan</a>
       <a routerLink="/admin/users" routerLinkActive="is-active" ariaCurrentWhenActive="page">Người dùng</a>
-      <a routerLink="/admin/approvals" routerLinkActive="is-active" ariaCurrentWhenActive="page">Duyệt salon</a>
+      <a routerLink="/admin/approvals" routerLinkActive="is-active" ariaCurrentWhenActive="page">Duyệt đăng ký</a>
+      <a routerLink="/admin/salon-changes" routerLinkActive="is-active" ariaCurrentWhenActive="page">Duyệt cập nhật</a>
       <a routerLink="/admin/content" routerLinkActive="is-active" ariaCurrentWhenActive="page">Nội dung</a>
       <a routerLink="/admin/billing" routerLinkActive="is-active" ariaCurrentWhenActive="page">Phí nền tảng</a>
       <a routerLink="/admin/booking-disputes" routerLinkActive="is-active" ariaCurrentWhenActive="page">Phản ánh lịch hẹn</a>

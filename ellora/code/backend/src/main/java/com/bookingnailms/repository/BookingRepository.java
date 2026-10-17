@@ -16,6 +16,15 @@ import java.util.UUID;
 
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, Long> {
+    @Query("select b from Booking b left join fetch b.customer c join fetch b.salon join fetch b.service " +
+            "where b.status = com.bookingnailms.enums.BookingStatus.CONFIRMED " +
+            "and (trim(c.email) <> '' or (c.id is null and trim(b.guestEmail) <> '')) " +
+            "and b.scheduledAt > :now and b.scheduledAt <= :until " +
+            "and not exists (select e.id from BookingEmail e where e.bookingId = b.id " +
+            "and e.kind = 'APPOINTMENT_REMINDER') order by b.scheduledAt, b.id")
+    List<Booking> findReminderCandidates(@Param("now") LocalDateTime now,
+            @Param("until") LocalDateTime until, Pageable pageable);
+
     @Query("select b.salon.id from Booking b where b.id = :id")
     java.util.Optional<Long> findSalonIdById(@Param("id") Long id);
 
