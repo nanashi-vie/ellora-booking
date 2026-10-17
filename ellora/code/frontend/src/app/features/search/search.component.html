@@ -1,73 +1,56 @@
-<div class="flex flex-col lg:flex-row min-h-[calc(100vh-80px)] w-full">
-      
-      <!-- Left: Results List -->
-      <div class="w-full lg:w-[60%] xl:w-[55%] p-6 lg:p-8 flex flex-col gap-6 lg:overflow-y-auto lg:h-[calc(100vh-80px)]">
-        
-        <!-- Search Filters Header -->
-        <div class="flex flex-col gap-4">
-          <h1 class="font-serif text-3xl text-charcoal-900 font-medium">Tìm salon</h1>
-          <input type="search" aria-label="Tìm theo tên salon" placeholder="Tên salon" class="border rounded-lg p-3" [value]="keyword()" (input)="keyword.set($any($event.target).value)" (keyup.enter)="page.set(0); search()" />
-          @if (error()) { <p role="alert" class="text-red-700">{{ error() }}</p> }
-          
-          <div class="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            <app-badge color="dark" size="md" class="shrink-0">All</app-badge>
-            @for (category of categories(); track category.id) {
-              <app-badge color="outline" size="md" class="shrink-0 opacity-60" title="Bộ lọc danh mục chưa khả dụng">
-                {{ category.name }}
-              </app-badge>
-            }
-          </div>
-          
-          <div class="flex items-center justify-between text-sm text-charcoal-800 border-b border-charcoal-800/10 pb-4">
-            <span>{{ total() }} salon</span>
-            <button disabled title="Sắp xếp chưa khả dụng" class="flex items-center gap-1.5 font-medium opacity-60">
-              Sort by: Recommended
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 9l-7 7-7-7" /></svg>
-            </button>
-          </div>
-        </div>
-
-        <!-- Grid of Results -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-10">
-          @for (salon of salons(); track salon.id) {
-            <app-salon-card [salon]="salon"></app-salon-card>
-          }
-        </div>
-        <div class="flex justify-center gap-4 mt-4">
-          <button type="button" [disabled]="page() === 0" (click)="move(-1)" class="disabled:opacity-40">Trang trước</button>
-          <span>Trang {{ page() + 1 }}</span>
-          <button type="button" [disabled]="last()" (click)="move(1)" class="disabled:opacity-40">Trang sau</button>
-        </div>
-        
-      </div>
-
-      <!-- Right: Map Placeholder -->
-      <div class="hidden lg:block lg:w-[40%] xl:w-[45%] bg-ivory-200 sticky top-[80px] h-[calc(100vh-80px)] border-l border-charcoal-800/10">
-        <!-- Map visualization mock -->
-        <div class="w-full h-full relative flex items-center justify-center bg-[#f0eadd]">
-          <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(#2c2a29 1px, transparent 1px); background-size: 20px 20px;"></div>
-          
-          <!-- Mock Map Pins -->
-          @for (salon of salons(); track salon.id) {
-            <div class="absolute w-8 h-8 -ml-4 -mt-8 flex flex-col items-center justify-center cursor-pointer group"
-                 [style.top.%]="40 + (salon.rating * 5) % 40" 
-                 [style.left.%]="20 + (salon.reviewCount * 3) % 60">
-              <div class="bg-charcoal-900 text-white text-xs font-medium px-2 py-1 rounded shadow-lg group-hover:bg-dusty-pink-600 transition-colors whitespace-nowrap">
-                {{ salon.name }}
-              </div>
-              <div class="w-3 h-3 bg-charcoal-900 rotate-45 -mt-1.5 group-hover:bg-dusty-pink-600 transition-colors"></div>
-            </div>
-          }
-          
-          <div class="absolute bottom-6 right-6 flex flex-col gap-2">
-            <button class="w-10 h-10 bg-white border border-charcoal-800/10 rounded shadow flex items-center justify-center text-charcoal-900 hover:text-dusty-pink-600 transition-colors">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4" /></svg>
-            </button>
-            <button class="w-10 h-10 bg-white border border-charcoal-800/10 rounded shadow flex items-center justify-center text-charcoal-900 hover:text-dusty-pink-600 transition-colors">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 12H4" /></svg>
-            </button>
-          </div>
-        </div>
-      </div>
-      
+<section class="search-page" aria-labelledby="search-heading">
+  <div class="search-heading">
+    <h1 id="search-heading">Tìm salon phù hợp với bạn</h1>
+    <p>Chọn tiệm, khu vực và thời gian bạn muốn ghé.</p>
+  </div>
+  <app-salon-search-form [value]="filters()"></app-salon-search-form>
+  @if (filters().date) { <p class="search-note">Kết quả lọc theo giờ mở cửa và ngày nghỉ của tiệm. Lịch trống sẽ được kiểm tra khi đặt dịch vụ.</p> }
+  @if (filters().nearby && searchState.coordinates()) {
+    <p class="search-note">Trong bán kính {{ filters().radiusKm }} km từ vị trí của bạn. Khoảng cách ước tính theo đường chim bay.</p>
+  }
+  @if (needsLocation()) {
+    <div class="search-message" role="status">
+      <h2>Bật vị trí để tìm salon gần bạn</h2>
+      <p>Vị trí không được lưu cùng đường dẫn. Hãy dùng vị trí trên thiết bị này hoặc nhập khu vực trong ô Địa điểm.</p>
+      <button type="button" class="primary-button" [disabled]="searchState.locating()" (click)="locate()">{{ searchState.locating() ? 'Đang xác định vị trí…' : 'Dùng vị trí của tôi' }}</button>
+      @if (locationAttempted() && searchState.error()) { <p role="alert">{{ searchState.error() }}</p> }
     </div>
+  }
+  <div class="search-toolbar">
+    <p role="status" aria-live="polite">{{ loading() ? 'Đang tìm salon…' : needsLocation() ? 'Chưa chọn vị trí' : total() + ' salon phù hợp' }}</p>
+    <div class="search-toolbar__actions">
+      <label for="salon-sort">Sắp xếp</label>
+      <select id="salon-sort" [value]="filters().sort" [disabled]="needsLocation()" (change)="changeSort($any($event.target).value)">
+        @if (filters().nearby) { <option value="distance">{{ needsLocation() ? 'Gần nhất (cần vị trí)' : 'Gần nhất' }}</option> }
+        <option value="rating">Đánh giá cao</option>
+        <option value="newest">Mới nhất</option>
+      </select>
+      <button type="button" class="map-toggle" [attr.aria-expanded]="mobileMap()" (click)="mobileMap.set(!mobileMap())">{{ mobileMap() ? 'Ẩn bản đồ' : 'Xem bản đồ' }}</button>
+    </div>
+  </div>
+  <div class="search-layout">
+    <div class="search-results" [attr.aria-busy]="loading()">
+      @if (error()) {
+        <div class="search-message"><p role="alert">{{ error() }}</p><button type="button" (click)="retry()">Thử lại</button></div>
+      } @else if (loading()) {
+        <div class="search-loading" role="status">Đang tải danh sách salon…</div>
+      } @else if (!needsLocation() && !salons().length) {
+        <div class="search-message"><h2>Chưa tìm thấy salon phù hợp</h2><p>Thử khu vực khác, tăng bán kính hoặc bỏ bớt bộ lọc thời gian.</p><button type="button" (click)="clearFilters()">Xóa bộ lọc</button></div>
+      } @else {
+        <div class="search-grid">
+          @for (salon of salons(); track salon.id) { <app-salon-card [salon]="salon"></app-salon-card> }
+        </div>
+      }
+      @if (total() > 0) {
+        <nav class="search-pagination" aria-label="Phân trang salon">
+          <button type="button" [disabled]="page() === 0 || loading()" (click)="move(-1)">Trang trước</button>
+          <span>Trang {{ page()+1 }}</span>
+          <button type="button" [disabled]="last() || loading()" (click)="move(1)">Trang sau</button>
+        </nav>
+      }
+    </div>
+    <aside class="search-map-panel" [class.search-map-panel--open]="mobileMap()" aria-label="Bản đồ kết quả">
+      <app-salon-search-map [salons]="salons()"></app-salon-search-map>
+    </aside>
+  </div>
+</section>

@@ -2,9 +2,10 @@ import { Component, inject, signal, computed, OnDestroy, OnInit } from '@angular
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { SalonApiService, SalonWorkingHour } from '../../services/salon-api.service';
 import { HttpErrorResponse } from '@angular/common/http';
-import { BookingApiService } from '../../services/booking-api.service';
+import { BookingApiService, GuestBookingReceipt } from '../../services/booking-api.service';
 import { Salon, Service, Staff } from '../../models/ellora.model';
 import { AuthService } from '../../services/auth.service';
 
@@ -18,7 +19,7 @@ interface CalendarDay {
 @Component({
   selector: 'app-booking',
   standalone: true,
-  imports: [CommonModule, RouterModule, ReactiveFormsModule],
+  imports: [CommonModule, RouterModule, ReactiveFormsModule, CdkTrapFocus],
   templateUrl: './booking.component.html',
   styleUrl: './booking.component.scss'
 })
@@ -41,6 +42,16 @@ export class BookingComponent implements OnInit, OnDestroy {
   readonly closuresLoading = signal(false);
   readonly closuresError = signal('');
   private closureRequest = 0;
+  private destroyed = false;
+  readonly authReady = signal(false);
+  readonly guestMode = signal(false);
+  readonly profileEmail = signal('');
+  readonly guestReceipt = signal<GuestBookingReceipt | null>(null);
+  readonly guestEmail = signal('');
+  readonly guestReceiptSchedule = computed(() => {
+    const value = this.guestReceipt()?.scheduledAt;
+    return value ? `${value.slice(11, 16)} • ${value.slice(8, 10)}/${value.slice(5, 7)}/${value.slice(0, 4)}` : '';
+  });
   private readonly bookingNow = signal(Date.now());
   readonly earliestBooking = computed(() => {
     const instant = new Date(Math.ceil((this.bookingNow() + 60 * 60 * 1000) / 60000) * 60000);
@@ -72,9 +83,10 @@ export class BookingComponent implements OnInit, OnDestroy {
 
   // Step 4: Form
   customerForm = this.fb.nonNullable.group({
-    fullName: ['', Validators.required],
+    fullName: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(255)]],
     phone: ['', [Validators.required, Validators.pattern(/^[+0-9 ()-]{8,20}$/), Validators.pattern(/\d/)]],
-    notes: ['']
+    email: ['', [Validators.email, Validators.maxLength(254)]],
+    notes: ['', Validators.maxLength(1000)]
   });
 
   async ngOnInit() {
@@ -84,23 +96,44 @@ export class BookingComponent implements OnInit, OnDestroy {
       this.error.set('Vui lòng chọn salon trước khi đặt lịch.');
       return;
     }
+    const identity = this.loadBookingIdentity();
     try {
       const [salon, services, staff, hours] = await Promise.all([
         this.salonApi.detail(salonId), this.salonApi.services(salonId), this.salonApi.employees(salonId), this.salonApi.workingHours(salonId)
       ]);
+      if (this.destroyed) return;
       this.salon.set(salon); this.services.set(services); this.staffList.set(staff);
       this.workingHours.set(hours);
       void this.loadClosedDates();
       const serviceId = this.route.snapshot.queryParamMap.get('serviceId');
       if (serviceId && services.some(service => service.id === serviceId)) this.selectedServiceIds.set([serviceId]);
-    } catch { this.error.set('Không tải được thông tin salon. Vui lòng thử lại.'); }
+    } catch { if (!this.destroyed) this.error.set('Không tải được thông tin salon. Vui lòng thử lại.'); }
+    await identity;
+  }
+
+  private async loadBookingIdentity(): Promise<void> {
+    let authenticated: boolean;
+    try { authenticated = await this.authService.isAuthenticated(); }
+    catch {
+      if (!this.destroyed) this.error.set('Không kiểm tra được phiên đăng nhập. Vui lòng tải lại trang.');
+      return;
+    }
+    if (this.destroyed) return;
+    this.guestMode.set(!authenticated);
+    if (!authenticated) {
+      this.customerForm.controls.email.setValidators([Validators.required, Validators.email, Validators.maxLength(254)]);
+      this.customerForm.controls.email.updateValueAndValidity();
+      this.authReady.set(true);
+      return;
+    }
     try {
       const profile = await this.authService.getUserProfile();
-      this.customerForm.patchValue({
-        fullName: profile.name || '',
-        phone: profile.phone_number || ''
-      });
-    } catch { /* Profile details are optional for the booking form. */ }
+      if (this.destroyed) return;
+      this.profileEmail.set(profile.email || '');
+      if (!this.customerForm.controls.fullName.dirty && !this.customerForm.controls.fullName.value) this.customerForm.controls.fullName.setValue(profile.name || '');
+      if (!this.customerForm.controls.phone.dirty && !this.customerForm.controls.phone.value) this.customerForm.controls.phone.setValue(profile.phone_number || '');
+    } catch { /* Signed-in customers can enter missing contact details themselves. */ }
+    finally { if (!this.destroyed) this.authReady.set(true); }
   }
 
   // ─── Computed ───────────────────────────────────────
@@ -280,31 +313,43 @@ export class BookingComponent implements OnInit, OnDestroy {
 
 
   async confirmBooking() {
+    if (!this.authReady() || this.saving() || this.destroyed || this.showSuccessPopup() || this.guestReceipt()) return;
     this.refreshBookingTime();
+    if (this.guestMode()) this.customerForm.controls.email.setValue(this.customerForm.controls.email.value.trim(), { emitEvent: false });
     this.customerForm.markAllAsTouched();
-    if (this.customerForm.invalid) { this.error.set('Vui lòng nhập họ tên và số điện thoại hợp lệ.'); return; }
+    if (this.customerForm.invalid) { this.error.set(this.guestMode() ? 'Vui lòng nhập họ tên, số điện thoại hợp lệ và email nhận thông tin lịch hẹn.' : 'Vui lòng nhập họ tên và số điện thoại hợp lệ.'); return; }
     if (!this.salon() || !this.selectedServiceIds()[0] || !this.selectedDate() || !this.selectedTime() || this.saving()) return;
     if (!this.selectedTimeValid()) { this.error.set('Vui lòng chọn lại giờ hẹn, cách hiện tại ít nhất 1 tiếng và đủ thời lượng dịch vụ trước giờ đóng cửa.'); return; }
     this.saving.set(true); this.error.set('');
     try {
-      await this.bookingApi.createBooking({
+      const request = {
         salonId: Number(this.salon()!.id),
         serviceId: Number(this.selectedServiceIds()[0]),
         employeeId: this.selectedStaffId() && this.selectedStaffId() !== 'any' ? Number(this.selectedStaffId()) : undefined,
         scheduledAt: `${this.selectedDate()}T${this.selectedTime()}:00`,
         customerNote: this.customerForm.controls.notes.value,
-        customerPhone: this.customerForm.controls.phone.value.trim(),
-      });
+      };
+      if (this.guestMode()) {
+        const email = this.customerForm.controls.email.value.trim();
+        const receipt = await this.bookingApi.createGuestBooking({ ...request, fullName: this.customerForm.controls.fullName.value.trim(),
+          phone: this.customerForm.controls.phone.value.trim(), email });
+        if (this.destroyed) return;
+        this.guestReceipt.set(receipt); this.guestEmail.set(email);
+      } else await this.bookingApi.createBooking({ ...request, customerPhone: this.customerForm.controls.phone.value.trim() });
     } catch (error) {
-      this.error.set(error instanceof HttpErrorResponse && error.status === 400 && typeof error.error?.message === 'string'
-        ? error.error.message : 'Không đặt được lịch. Vui lòng kiểm tra thời gian và thử lại.');
+      if (this.destroyed) return;
+      this.error.set(error instanceof HttpErrorResponse && error.status === 429
+        ? 'Bạn đã gửi nhiều yêu cầu đặt lịch. Vui lòng thử lại sau ít phút.'
+        : error instanceof HttpErrorResponse && [400, 409].includes(error.status) && typeof error.error?.message === 'string'
+          ? error.error.message : 'Không đặt được lịch. Vui lòng kiểm tra thời gian và thử lại.');
       this.saving.set(false);
       return;
     }
+    if (this.destroyed) return;
     this.saving.set(false);
     this.showSuccessPopup.set(true);
     this.countdown.set(30);
-    this.startCountdown();
+    if (!this.guestMode()) this.startCountdown();
   }
 
   startCountdown() {
@@ -319,10 +364,11 @@ export class BookingComponent implements OnInit, OnDestroy {
   closeSuccessPopupAndRedirect() {
     if (this.countdownTimer) clearInterval(this.countdownTimer);
     this.showSuccessPopup.set(false);
-    this.router.navigate(['/setting/my-bookings']);
+    this.router.navigate(this.guestReceipt() ? ['/salon', this.salon()!.id] : ['/setting/my-bookings']);
   }
 
   ngOnDestroy() {
+    this.destroyed = true;
     this.closureRequest++;
     if (this.countdownTimer) clearInterval(this.countdownTimer);
   }

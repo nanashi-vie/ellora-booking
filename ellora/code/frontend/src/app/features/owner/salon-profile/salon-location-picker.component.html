@@ -1,0 +1,32 @@
+<section class="location-picker" aria-labelledby="salon-location-title">
+  <h3 id="salon-location-title">Vị trí tiệm trên bản đồ</h3>
+  @if (disabled()) {
+    <p class="location-lock-reason" role="status">{{ disabledReason() }}</p>
+  } @else {
+    <p>Chạm vào bản đồ hoặc kéo ghim đến đúng tiệm. Vị trí sẽ cập nhật sau khi Admin duyệt hồ sơ.</p>
+  }
+  @if (value(); as point) {
+    <p class="location-current" role="status">Đã chọn: {{ point.latitude }}, {{ point.longitude }}</p>
+  } @else {
+    <p class="location-current">{{ disabled() ? 'Tiệm chưa có vị trí đã lưu trên bản đồ.' : 'Chưa chọn vị trí.' }}</p>
+  }
+  <button type="button" class="location-open" (click)="openMap()" [disabled]="loading() || (mapOpen() && !mapError())">
+    {{ loading() ? 'Đang mở bản đồ…' : mapError() ? 'Thử tải lại bản đồ' : mapOpen() ? 'Bản đồ đang mở' : disabled() ? 'Mở bản đồ để xem' : 'Mở bản đồ để chọn vị trí' }}
+  </button>
+  @if (loading()) { <p role="status">Đang tải bản đồ OpenStreetMap…</p> }
+  @if (mapError()) { <p class="location-error" role="alert">{{ mapError() }}</p> }
+  <div #mapCanvas class="location-map" [hidden]="!mapOpen() || !!mapError()" [attr.aria-label]="disabled() ? 'Bản đồ vị trí tiệm, chỉ xem' : 'Bản đồ chọn vị trí tiệm'"></div>
+  @if (mapOpen()) {
+    <p class="location-attribution">Dữ liệu bản đồ © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>.</p>
+  }
+  <fieldset [disabled]="disabled()" class="location-manual" [formGroup]="manualForm" (keydown.enter)="$event.preventDefault(); applyCoordinates()">
+    <legend>Hoặc nhập tọa độ</legend>
+    <p id="salon-coordinate-help">Dán tọa độ bạn đã biết rồi bấm Áp dụng tọa độ. Vĩ độ từ -90 đến 90; kinh độ từ -180 đến 180.</p>
+    <div class="location-coordinate-grid">
+      <label for="salon-latitude">Vĩ độ<input id="salon-latitude" formControlName="latitude" type="text" inputmode="decimal" placeholder="10.776889" aria-describedby="salon-coordinate-help salon-coordinate-error" [attr.aria-invalid]="!!manualError()"></label>
+      <label for="salon-longitude">Kinh độ<input id="salon-longitude" formControlName="longitude" type="text" inputmode="decimal" placeholder="106.700806" aria-describedby="salon-coordinate-help salon-coordinate-error" [attr.aria-invalid]="!!manualError()"></label>
+    </div>
+    @if (manualError()) { <p id="salon-coordinate-error" class="location-error" role="alert">{{ manualError() }}</p> }
+    <button type="button" (click)="applyCoordinates()">Áp dụng tọa độ</button>
+  </fieldset>
+</section>

@@ -93,4 +93,16 @@ describe('Role routes', () => {
     role='CUSTOMER';
     await harness.navigateByUrl('/admin/users');expect(TestBed.inject(Router).url).toBe('/');
   });
+
+  it('allows anonymous booking while account history and business registration still require login', async () => {
+    authenticated = false;
+    TestBed.inject(Router).resetConfig(stubRoutes(routes));
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/booking?salonId=1&serviceId=2');
+    expect(TestBed.inject(Router).url).toBe('/booking?salonId=1&serviceId=2');
+    for (const url of ['/setting/my-bookings', '/business-registration']) {
+      await harness.navigateByUrl(url);
+      expect(TestBed.inject(Router).url).toBe('/login');
+    }
+  });
 });

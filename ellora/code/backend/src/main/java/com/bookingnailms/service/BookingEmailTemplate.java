@@ -7,7 +7,9 @@ final class BookingEmailTemplate {
 
     static String render(String kind, String body) {
         String title = switch (kind == null ? "" : kind) {
+            case "BOOKING_RECEIVED" -> "Đã nhận yêu cầu đặt lịch";
             case "CONFIRMED" -> "Lịch hẹn đã được xác nhận";
+            case "APPOINTMENT_REMINDER" -> "Bạn có lịch hẹn sắp tới";
             case "BILLING_REMINDER" -> "Nhắc thanh toán phí nền tảng";
             default -> "Bạn có lịch hẹn mới";
         };

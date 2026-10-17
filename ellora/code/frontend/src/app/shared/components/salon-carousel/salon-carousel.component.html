@@ -2,12 +2,12 @@
   @if (animateHeader) {
     <div class="flex items-center justify-between mb-8" appRevealOnScroll="fade-up" [revealDistance]="24">
       <h2 class="font-bold text-2xl text-brand-darker tracking-tight">{{ title }}</h2>
-      <a [routerLink]="viewAllLink" class="text-sm font-semibold text-brand hover:text-brand-darker transition-colors" appRevealOnScroll="fade" [revealDelay]="120">Xem tất cả</a>
+      <a [routerLink]="viewAllLink" [queryParams]="viewAllQueryParams" class="text-sm font-semibold text-brand hover:text-brand-darker transition-colors" appRevealOnScroll="fade" [revealDelay]="120">Xem tất cả</a>
     </div>
   } @else {
     <div class="flex items-center justify-between mb-8">
       <h2 class="font-bold text-2xl text-brand-darker tracking-tight">{{ title }}</h2>
-      <a [routerLink]="viewAllLink" class="text-sm font-semibold text-brand hover:text-brand-darker transition-colors">Xem tất cả</a>
+      <a [routerLink]="viewAllLink" [queryParams]="viewAllQueryParams" class="text-sm font-semibold text-brand hover:text-brand-darker transition-colors">Xem tất cả</a>
     </div>
   }
   

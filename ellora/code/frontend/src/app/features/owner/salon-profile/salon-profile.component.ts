@@ -6,8 +6,11 @@ import { SalonRegistration, SalonProfileChange } from '../../../services/salon-r
 import { PhotoUpload } from '../../../shared/components/photo-upload.component';
 import { SalonChangePreviewComponent } from '../../../shared/components/salon-change-preview.component';
 import { WorkingHoursComponent } from './working-hours.component';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { SalonCoordinates, validCoordinates } from '../../../services/leaflet-map.service';
+import { SalonLocationPickerComponent } from './salon-location-picker.component';
 
-@Component({standalone:true, imports:[ReactiveFormsModule,RouterLink,PhotoUpload,SalonChangePreviewComponent,WorkingHoursComponent], styleUrl:'../owner-data.scss', template:`
+@Component({standalone:true, imports:[ReactiveFormsModule,RouterLink,PhotoUpload,SalonChangePreviewComponent,WorkingHoursComponent,SalonLocationPickerComponent], styleUrl:'../owner-data.scss', template:`
 <main class="owner-page" style="max-width:960px">
  <header><div><h1>Hồ sơ salon</h1><p class="muted">Thông tin giúp khách tìm và liên hệ với tiệm.</p></div><a routerLink="/owner/dashboard">Về tổng quan</a></header>
  @if(error()){<p role="alert" class="error">{{error()}}</p>}
@@ -35,6 +38,8 @@ import { WorkingHoursComponent } from './working-hours.component';
     <label>Số điện thoại<input type="tel" formControlName="phone" maxlength="20" autocomplete="tel"></label>
     <label>Email liên hệ<input type="email" formControlName="email" maxlength="255" autocomplete="email"></label>
    </div>
+   @if(locationNeedsReselect()){<p role="alert" class="error">Địa chỉ đã thay đổi. Hãy chọn lại vị trí trên bản đồ hoặc áp dụng tọa độ mới trước khi gửi.</p>}
+   <app-salon-location-picker [value]="location()" [disabled]="pending()||saving()" [disabledReason]="pending() ? 'Hồ sơ đang có yêu cầu chờ Admin duyệt. Bạn có thể mở xem bản đồ; chọn và lưu vị trí mới sẽ mở lại sau khi yêu cầu được xử lý.' : 'Đang gửi hồ sơ. Bạn có thể xem bản đồ, vui lòng chờ gửi xong để chỉnh vị trí.'" (selectionChange)="selectLocation($event)"/>
    @if(form.touched && form.invalid){<p role="alert" class="error">Điền tên, địa chỉ, tỉnh/thành và quận/huyện. Kiểm tra định dạng email và số điện thoại.</p>}
    <div class="actions"><button class="primary" type="submit" [disabled]="saving()||form.pristine||pending()">{{saving()?'Đang gửi…':'Gửi Admin duyệt'}}</button><button type="button" (click)="reset()" [disabled]="saving()||form.pristine||pending()">Hủy thay đổi</button></div>
   </form>
@@ -45,17 +50,40 @@ export class SalonProfileComponent implements OnInit {
  private api=inject(OwnerApiService);
  salon=signal<SalonRegistration|null>(null);loading=signal(true);saving=signal(false);error=signal('');message=signal('');
  change=signal<SalonProfileChange|null>(null);
+ readonly location=signal<SalonCoordinates|null>(null);
+ readonly locationNeedsReselect=signal(false);
  pending(){return this.change()?.status === 'PENDING';}
  private required=[Validators.required,Validators.maxLength(255),Validators.pattern(/\S/)];
  form=inject(NonNullableFormBuilder).group({name:['',this.required],description:['',Validators.maxLength(5000)],address:['',this.required],city:['',this.required],district:['',this.required],phone:['',Validators.pattern(/^$|^[+0-9 ()-]{8,20}$/)],email:['',[Validators.email,Validators.maxLength(255)]]});
+ constructor(){
+  for(const field of ['address','city','district'] as const){
+   let previous=this.form.controls[field].value;
+   this.form.controls[field].valueChanges.pipe(takeUntilDestroyed()).subscribe(value=>{
+    if(value===previous)return;previous=value;
+    if(this.location()||this.locationNeedsReselect()){
+     this.location.set(null);this.locationNeedsReselect.set(true);this.form.markAsDirty();
+    }
+   });
+  }
+ }
  ngOnInit(){void this.load();}
- reset(){const s=this.salon();if(s)this.form.reset({name:s.name,description:s.description||'',address:s.address,city:s.city,district:s.district,phone:s.phone||'',email:s.email||''});}
+ reset(){const s=this.salon();if(s){
+  this.location.set(null);this.locationNeedsReselect.set(false);
+  this.form.reset({name:s.name,description:s.description||'',address:s.address,city:s.city,district:s.district,phone:s.phone||'',email:s.email||''});
+  const point={latitude:s.latitude as number,longitude:s.longitude as number};
+  this.location.set(validCoordinates(point)?point:null);
+ }}
+ selectLocation(value:SalonCoordinates){
+  if(this.pending()||this.saving()||!validCoordinates(value))return;
+  this.location.set({...value});this.locationNeedsReselect.set(false);this.form.markAsDirty();
+ }
  async load(){this.loading.set(true);this.error.set('');try{const [salon,change]=await Promise.all([this.api.salon(),this.api.salonChange()]);this.salon.set(salon);this.change.set(change);this.reset();this.pending()?this.form.disable():this.form.enable();}catch(e){this.salon.set(null);this.error.set(ownerError(e));}finally{this.loading.set(false);}}
  async refreshPhoto(){try{this.change.set(await this.api.salonChange());if(this.pending())this.form.disable();}catch(e){this.error.set(ownerError(e));}}
  async save(){
   if(this.saving()||this.pending())return;this.form.markAllAsTouched();if(this.form.invalid)return;
+  if(this.locationNeedsReselect()){this.error.set('Vui lòng chọn lại vị trí tiệm sau khi thay đổi địa chỉ.');return;}
   this.saving.set(true);this.error.set('');this.message.set('');this.form.disable();
-  try{const v=this.form.getRawValue();this.change.set(await this.api.saveSalon({name:v.name.trim(),description:v.description.trim(),address:v.address.trim(),city:v.city.trim(),district:v.district.trim(),phone:v.phone.trim(),email:v.email.trim()}));this.reset();this.message.set('Đã gửi yêu cầu. Hồ sơ sẽ cập nhật khi Admin duyệt.');}
+  try{const v=this.form.getRawValue();const point=this.location();this.change.set(await this.api.saveSalon({name:v.name.trim(),description:v.description.trim(),address:v.address.trim(),city:v.city.trim(),district:v.district.trim(),phone:v.phone.trim(),email:v.email.trim(),...(point?point:{})}));this.reset();this.message.set('Đã gửi yêu cầu. Hồ sơ sẽ cập nhật khi Admin duyệt.');}
   catch(e){this.error.set(ownerError(e));}finally{this.saving.set(false);if(!this.pending())this.form.enable();}
  }
 }

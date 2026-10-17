@@ -13,37 +13,8 @@
         Khám phá các salon làm móng được đánh giá hàng đầu, đặt lịch ngay lập tức và trải nghiệm chăm sóc bản thân hiện đại cùng Ellora.
       </p>
 
-      <!-- Search Bar Pill -->
-      <div class="mt-6 w-full max-w-4xl bg-white rounded-full p-2 border border-[#F4B8C8]/55 ring-4 ring-[#E7D9FF]/35 shadow-[0_24px_70px_rgba(201,99,120,0.16),0_0_0_1px_rgba(255,255,255,0.75)_inset] flex flex-col sm:flex-row items-center gap-0">
-        <!-- Salon Name -->
-        <div class="flex-1 w-full flex items-center gap-3 px-5 py-3 border-b sm:border-b-0 sm:border-r border-brand-darker/10">
-          <svg class="w-5 h-5 text-brand-darker/40 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-          </svg>
-          <input type="text" placeholder="Tên tiệm" class="w-full bg-transparent focus:outline-none text-brand-darker placeholder:text-brand-darker/50 font-medium text-sm" [value]="searchKeyword()" (input)="searchKeyword.set($any($event.target).value)" />
-        </div>
-        <!-- Location -->
-        <div class="flex-1 w-full flex items-center gap-3 px-5 py-3 border-b sm:border-b-0 sm:border-r border-brand-darker/10">
-          <svg class="w-5 h-5 text-brand-darker/40 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          <input type="text" placeholder="Địa điểm" title="Bộ lọc địa điểm chưa khả dụng" disabled class="w-full bg-transparent focus:outline-none text-brand-darker placeholder:text-brand-darker/50 font-medium text-sm" />
-        </div>
-        <!-- Date & Time -->
-        <div class="flex-1 w-full flex items-center gap-3 px-6 py-3 border-b sm:border-b-0 sm:border-r border-brand-darker/10">
-          <svg class="w-5 h-5 text-brand-darker/40 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          <input type="text" placeholder="Thời gian" title="Bộ lọc thời gian chưa khả dụng" disabled class="w-full bg-transparent focus:outline-none text-brand-darker placeholder:text-brand-darker/60 font-medium text-sm" />
-        </div>
-        <!-- Search Button -->
-        <button routerLink="/search" [queryParams]="{ keyword: searchKeyword() }" class="w-full sm:w-auto bg-brand hover:bg-brand-dark text-white font-bold px-8 py-3 rounded-full transition-colors shrink-0 flex items-center justify-center gap-2 text-sm">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          Tìm kiếm
-        </button>
+      <div class="home-search" id="home-search">
+        <app-salon-search-form idPrefix="home-salon-search" />
       </div>
 
       <!-- Trust Indicator -->
@@ -59,10 +30,37 @@
 
 
   <div class="home-below-surface">
-    @if (salonError()) { <p role="alert" class="text-center text-red-700 py-4">{{ salonError() }}</p> }
-    <!-- Featured Salons Section -->
-    <app-salon-carousel title="Các Salon gần bạn" viewAllLink="/search" [salons]="salons()" [animateHeader]="false" [animateCards]="false"></app-salon-carousel>
-    <app-salon-carousel title="Top Salon" viewAllLink="/search" [salons]="topSalons()"></app-salon-carousel>
+    <section class="home-nearby" aria-label="Salon gần bạn">
+      @if (nearbySalons().length && search.coordinates()) {
+        <div class="home-nearby__context">
+          <p>Trong bán kính 5 km quanh vị trí của bạn. Khoảng cách theo đường thẳng.</p>
+          <button type="button" (click)="useNearbyLocation()" [disabled]="search.locating()">{{ search.locating() ? 'Đang lấy vị trí…' : 'Cập nhật vị trí' }}</button>
+        </div>
+        <app-salon-carousel title="Salon gần bạn" viewAllLink="/search" [viewAllQueryParams]="nearbyQuery" [salons]="nearbySalons()" [animateHeader]="false" [animateCards]="false" />
+      } @else {
+        <div class="home-nearby__invitation">
+          <div>
+            <h2>Salon gần bạn</h2>
+            <p>Dùng vị trí của bạn để tìm tiệm trong bán kính 5 km. Bạn cũng có thể nhập khu vực trong ô tìm kiếm phía trên.</p>
+          </div>
+          <button type="button" (click)="useNearbyLocation()" [disabled]="search.locating()">{{ search.locating() ? 'Đang lấy vị trí…' : 'Dùng vị trí của tôi' }}</button>
+          @if (search.locating()) { <p role="status">Đang xác định vị trí của bạn…</p> }
+          @if (locationAttempted() && search.error()) { <p role="alert" class="home-search-error">{{ search.error() }}</p> }
+          @if (nearbyLoading()) { <p role="status">Đang tìm salon gần bạn…</p> }
+          @else if (nearbyError()) {
+            <p role="alert" class="home-search-error">{{ nearbyError() }}</p>
+            <button type="button" (click)="retryNearby()">Tải lại salon gần bạn</button>
+          } @else if (search.coordinates()) { <p role="status">Chưa có salon phù hợp trong bán kính 5 km. Hãy thử tìm theo khu vực hoặc mở rộng bán kính ở trang tìm kiếm.</p> }
+        </div>
+      }
+    </section>
+    @if (salonLoading()) { <p role="status" class="home-salon-status">Đang tải danh sách salon…</p> }
+    @else if (salonError()) { <div class="home-salon-status"><p role="alert" class="home-search-error">{{ salonError() }}</p><button type="button" (click)="loadSalons()">Tải lại danh sách</button></div> }
+    @else if (salons().length) { <app-salon-carousel title="Khám phá salon" viewAllLink="/search" [salons]="salons()" [animateHeader]="false" [animateCards]="false" /> }
+    @else { <p role="status" class="home-salon-status">Chưa có salon để hiển thị.</p> }
+    @if (topLoading()) { <p role="status" class="home-salon-status">Đang tải salon được đánh giá cao…</p> }
+    @else if (topError()) { <p role="alert" class="home-salon-status home-search-error">{{ topError() }}</p> }
+    @else if (topSalons().length) { <app-salon-carousel title="Salon được đánh giá cao" viewAllLink="/search" [viewAllQueryParams]="{ sort: 'rating' }" [salons]="topSalons()" /> }
 
     <section class="w-full px-4 md:px-6 py-10 md:py-12">
       <div class="max-w-7xl mx-auto bg-[#FDF2F4] rounded-[2.5rem] px-6 py-16 md:py-24">

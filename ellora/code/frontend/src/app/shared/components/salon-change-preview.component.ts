@@ -8,8 +8,8 @@ import { SalonProfileChange, SalonProfileFields } from '../../services/salon-reg
   <div class="table-wrap"><table>
    <thead><tr><th>Thông tin</th><th>Đang hiển thị</th><th>Đề nghị cập nhật</th></tr></thead>
    <tbody>@for(field of fields;track field.key){
-    <tr [class.changed]="change().current[field.key] !== change().proposed[field.key]">
-     <th scope="row">{{field.label}}</th><td>{{change().current[field.key] || '—'}}</td><td>{{change().proposed[field.key] || '—'}}</td>
+    <tr [class.changed]="change().current[field.key] !== proposedValue(field.key)">
+     <th scope="row">{{field.label}}</th><td>{{display(change().current[field.key])}}</td><td>{{display(proposedValue(field.key))}}</td>
     </tr>
    }</tbody>
   </table></div>
@@ -38,5 +38,12 @@ export class SalonChangePreviewComponent {
  fields:{key:keyof SalonProfileFields;label:string}[]=[
   {key:'name',label:'Tên salon'},{key:'description',label:'Giới thiệu'},{key:'address',label:'Địa chỉ'},
   {key:'city',label:'Tỉnh / Thành phố'},{key:'district',label:'Quận / Huyện'},
-  {key:'phone',label:'Số điện thoại'},{key:'email',label:'Email liên hệ'}];
+  {key:'phone',label:'Số điện thoại'},{key:'email',label:'Email liên hệ'},
+  {key:'latitude',label:'Vĩ độ'},{key:'longitude',label:'Kinh độ'}];
+ display(value: string | number | null | undefined) { return value === null || value === undefined || value === '' ? '—' : value; }
+ proposedValue(key:keyof SalonProfileFields) {
+  const change=this.change();
+  if((key==='latitude'||key==='longitude') && change.proposed.latitude==null && change.proposed.longitude==null) return change.current[key];
+  return change.proposed[key];
+ }
 }

@@ -14,6 +14,7 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   if (request.method === 'GET' && (/^\/customer\/salons(?:\/|$)/.test(path) || path === '/ping')) {
     return next(request);
   }
+  if (request.method === 'POST' && path === '/bookings/guest') return next(request);
 
   const authService = inject(AuthService);
 

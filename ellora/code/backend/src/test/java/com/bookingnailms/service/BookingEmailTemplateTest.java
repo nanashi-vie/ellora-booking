@@ -20,5 +20,7 @@ class BookingEmailTemplateTest {
                 .contains("Bạn có lịch hẹn mới"));
         assertTrue(BookingEmailTemplate.render("CONFIRMED", "Thời gian: 09:30 01/10/2026")
                 .contains("Lịch hẹn đã được xác nhận"));
+        assertTrue(BookingEmailTemplate.render("APPOINTMENT_REMINDER", "Thời gian: 09:30 18/10/2026")
+                .contains("Bạn có lịch hẹn sắp tới"));
     }
 }

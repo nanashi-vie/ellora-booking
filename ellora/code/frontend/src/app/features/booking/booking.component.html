@@ -1,5 +1,5 @@
 <div class="booking-page">
-  @if (error()) { <p role="alert" class="text-red-700 text-center py-4">{{ error() }}</p> }
+  @if (error()) { <p role="alert" class="booking-alert text-red-700 text-center">{{ error() }}</p> }
 
   <!-- ═══ Step Indicator ═══ -->
   <div class="step-bar">
@@ -284,19 +284,44 @@
         <!-- Customer form -->
         <form [formGroup]="customerForm" class="confirm-form">
           <p class="confirm-form__title">THÔNG TIN KHÁCH HÀNG</p>
+          @if (!authReady()) {
+            <p class="confirm-form__hint" role="status">Đang kiểm tra phiên đăng nhập…</p>
+          } @else if (guestMode()) {
+            <p class="confirm-form__hint">Bạn có thể đặt lịch ngay mà không cần tài khoản. Email dùng để nhận thông tin lịch hẹn và phản hồi từ tiệm.</p>
+          }
           <div class="confirm-form__row">
             <div class="confirm-form__field">
-              <label class="confirm-form__label">HỌ VÀ TÊN</label>
-              <input type="text" formControlName="fullName" class="confirm-form__input" placeholder="Nhập tên của bạn" />
+              <label for="booking-name" class="confirm-form__label">HỌ VÀ TÊN</label>
+              <input id="booking-name" type="text" formControlName="fullName" class="confirm-form__input" placeholder="Nhập tên của bạn" required maxlength="255" autocomplete="name"
+                [attr.aria-invalid]="customerForm.controls.fullName.touched && customerForm.controls.fullName.invalid" aria-describedby="booking-name-error" />
+              @if (customerForm.controls.fullName.touched && customerForm.controls.fullName.invalid) {
+                <p id="booking-name-error" class="confirm-form__error">Vui lòng nhập họ tên, tối đa 255 ký tự.</p>
+              }
             </div>
             <div class="confirm-form__field">
               <label for="booking-phone" class="confirm-form__label">SỐ ĐIỆN THOẠI</label>
-              <input id="booking-phone" type="tel" formControlName="phone" class="confirm-form__input" placeholder="090 123 4567" maxlength="20" autocomplete="tel" />
+              <input id="booking-phone" type="tel" formControlName="phone" class="confirm-form__input" placeholder="090 123 4567" required maxlength="20" autocomplete="tel"
+                [attr.aria-invalid]="customerForm.controls.phone.touched && customerForm.controls.phone.invalid" aria-describedby="booking-phone-error" />
+              @if (customerForm.controls.phone.touched && customerForm.controls.phone.invalid) {
+                <p id="booking-phone-error" class="confirm-form__error">Vui lòng nhập số điện thoại hợp lệ.</p>
+              }
             </div>
           </div>
+          @if (authReady() && guestMode()) {
+            <div class="confirm-form__field">
+              <label for="booking-email" class="confirm-form__label">EMAIL NHẬN THÔNG TIN LỊCH HẸN</label>
+              <input id="booking-email" type="email" formControlName="email" class="confirm-form__input" placeholder="ban@example.com" required maxlength="254" autocomplete="email"
+                [attr.aria-invalid]="customerForm.controls.email.touched && customerForm.controls.email.invalid" aria-describedby="booking-email-error" />
+              @if (customerForm.controls.email.touched && customerForm.controls.email.invalid) {
+                <p id="booking-email-error" class="confirm-form__error">Vui lòng nhập email hợp lệ để nhận thông tin lịch hẹn.</p>
+              }
+            </div>
+          } @else if (profileEmail()) {
+            <p class="confirm-form__hint">Email nhận thông tin: <strong>{{ profileEmail() }}</strong></p>
+          }
           <div class="confirm-form__field">
-            <label class="confirm-form__label">GHI CHÚ THÊM (TÙY CHỌN)</label>
-            <textarea formControlName="notes" rows="4" class="confirm-form__textarea" placeholder="Ví dụ: Tôi có da nhạy cảm hoặc yêu cầu đặc biệt về màu sắc..."></textarea>
+            <label for="booking-notes" class="confirm-form__label">GHI CHÚ THÊM (TÙY CHỌN)</label>
+            <textarea id="booking-notes" formControlName="notes" rows="4" maxlength="1000" class="confirm-form__textarea" placeholder="Ví dụ: Tôi có da nhạy cảm hoặc yêu cầu đặc biệt về màu sắc..."></textarea>
           </div>
         </form>
       </div>
@@ -317,8 +342,8 @@
             <span>Tổng cộng</span>
             <span class="order-card__total-price">{{ formatPrice(totalPrice()) }}</span>
           </div>
-          <button type="button" class="btn-pay" [disabled]="saving()" (click)="confirmBooking()">
-            ĐẶT LỊCH
+          <button type="button" class="btn-pay" [disabled]="saving() || !authReady()" (click)="confirmBooking()">
+            {{ saving() ? 'ĐANG GỬI…' : 'ĐẶT LỊCH' }}
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </button>
           <p class="order-card__secure">
@@ -349,22 +374,29 @@
   <!-- Success Popup Overlay -->
   @if (showSuccessPopup()) {
     <div class="success-modal-overlay">
-      <div class="success-modal">
+      <div class="success-modal" role="dialog" aria-modal="true" aria-labelledby="booking-success-title" aria-describedby="booking-success-description" cdkTrapFocus [cdkTrapFocusAutoCapture]="true">
         <div class="success-modal__icon">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 6L9 17l-5-5"/>
           </svg>
         </div>
-        <h2 class="success-modal__title">Đặt lịch thành công</h2>
-        <p class="success-modal__desc">Vui lòng chờ xác nhận từ chuyên gia của chúng tôi. Thông tin chi tiết đã được cập nhật trong phần lịch sử đặt lịch.</p>
-        
-        <div class="success-modal__countdown">
-          Tự động chuyển trang sau <span>{{ countdown() }}s</span>
-        </div>
-
-        <button class="btn-view-bookings" (click)="closeSuccessPopupAndRedirect()">
-          Xem lịch sử đặt lịch
-        </button>
+        <h2 id="booking-success-title" class="success-modal__title">{{ guestReceipt() ? 'Đã nhận yêu cầu đặt lịch' : 'Đặt lịch thành công' }}</h2>
+        @if (guestReceipt(); as receipt) {
+          <p id="booking-success-description" class="success-modal__desc">Vui lòng chờ tiệm xác nhận. Thông tin lịch hẹn và phản hồi từ tiệm sẽ được gửi đến <strong>{{ guestEmail() }}</strong>.</p>
+          <dl class="guest-receipt">
+            <div><dt>Mã lịch hẹn</dt><dd>#{{ receipt.id }}</dd></div>
+            <div><dt>Tiệm</dt><dd>{{ receipt.salonName }}</dd></div>
+            <div><dt>Dịch vụ</dt><dd>{{ receipt.serviceName }}</dd></div>
+            <div><dt>Ngày, giờ</dt><dd>{{ guestReceiptSchedule() }}</dd></div>
+            <div><dt>Trạng thái</dt><dd>Chờ tiệm xác nhận</dd></div>
+          </dl>
+          <p class="success-modal__note">Bạn có thể lưu mã lịch hẹn để liên hệ tiệm khi cần.</p>
+          <button type="button" class="btn-view-bookings" (click)="closeSuccessPopupAndRedirect()">Về trang tiệm</button>
+        } @else {
+          <p id="booking-success-description" class="success-modal__desc">Vui lòng chờ xác nhận từ chuyên gia của chúng tôi. Thông tin chi tiết đã được cập nhật trong phần lịch sử đặt lịch.</p>
+          <div class="success-modal__countdown">Tự động chuyển trang sau <span>{{ countdown() }}s</span></div>
+          <button type="button" class="btn-view-bookings" (click)="closeSuccessPopupAndRedirect()">Xem lịch sử đặt lịch</button>
+        }
       </div>
     </div>
   }

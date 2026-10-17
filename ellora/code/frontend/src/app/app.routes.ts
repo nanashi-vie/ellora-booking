@@ -16,6 +16,7 @@ export const routes: Routes = [
       { path: 'content', loadComponent: () => import('./features/admin-content/admin-content.component').then(m => m.AdminContentComponent) },
       { path: 'billing', loadComponent: () => import('./features/admin-content/billing.component').then(m => m.AdminBillingComponent) },
       { path: 'approvals', loadComponent: () => import('./features/admin-approvals/admin-approvals.component').then(m => m.AdminApprovalsComponent) },
+      { path: 'salon-changes', loadComponent: () => import('./features/admin-approvals/salon-changes.component').then(m => m.SalonChangesComponent) },
       { path: 'booking-disputes', loadComponent: () => import('./features/admin-booking-disputes/admin-booking-disputes.component').then(m => m.AdminBookingDisputesComponent) }
     ]
   },
@@ -43,7 +44,6 @@ export const routes: Routes = [
       {
         path: 'booking',
         data: { customerOnly: true },
-        canActivate: [authGuard],
         loadComponent: () => import('./features/booking/booking.component').then(m => m.BookingComponent)
       },
       {

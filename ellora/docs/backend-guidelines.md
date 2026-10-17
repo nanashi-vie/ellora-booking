@@ -69,6 +69,7 @@ REJECTED        // Bị từ chối
 
 ### Quy tắc booking:
 - Booking mới tạo phải bắt đầu với trạng thái `PENDING`.
+- Guest đặt online không có `customer_id`, có `guest_email` và tên/SĐT trên lịch; vẫn phải đặt trước ít nhất 1 giờ, chọn chính xác đến phút và tuân thủ giờ hoạt động/ngày nghỉ/trùng lịch. Walk-in do owner thêm giữ quy tắc cũ. Không suy ra loại lịch chỉ từ `customer == null`; dùng `isWalkIn()` và các contact helper khi xử lý mail/hiển thị. Guest không có tài khoản nên không tham gia luồng review/phản hồi hoàn thành qua tài khoản.
 - Chủ salon có thể xác nhận (`CONFIRMED`), từ chối (`REJECTED`), bắt đầu thực hiện (`IN_PROGRESS`), hoặc hoàn thành (`COMPLETED`) hoặc hủy (`CANCELLED`) booking.
 - Khách hàng chỉ có thể review khi booking ở trạng thái `COMPLETED` và khách đã xác nhận sử dụng dịch vụ hoặc admin đã công nhận hoàn thành. Đánh giá cũ được giữ nguyên.
 - Tránh trùng booking cho cùng salon, employee, service, ngày và khung giờ.
