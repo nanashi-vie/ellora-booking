@@ -32,6 +32,12 @@ GET /api/bookings/my                   # Lấy danh sách booking của khách h
 GET /api/salon/bookings                # Lấy danh sách booking của salon (cho salon owner)
 PATCH /api/bookings/{id}/status        # Cập nhật trạng thái booking (PENDING -> CONFIRMED, CANCELLED, v.v.)
 
+# Completion confirmation (customer) and disputed completion (admin)
+POST /api/bookings/{id}/completion-response       # {completed, completionVersion, reason?}; chỉ khách của lịch
+GET /api/admin/booking-disputes                  # Phân trang; lọc status OPEN/UPHELD/REOPENED
+GET /api/admin/booking-disputes/{id}             # Lịch hẹn, phản ánh và liên hệ hai bên; chỉ admin
+PATCH /api/admin/booking-disputes/{id}/resolution # {outcome: UPHELD|REOPENED, note}; ghi nhận admin xử lý
+
 # Reviews
 POST /api/reviews                      # Tạo review mới cho salon sau khi booking COMPLETED
 GET /api/salons/{salonId}/reviews      # Lấy danh sách review của salon

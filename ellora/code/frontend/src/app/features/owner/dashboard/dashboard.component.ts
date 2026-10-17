@@ -1,14 +1,16 @@
-import { Component, signal, inject, OnInit } from '@angular/core';
+import { Component, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { provideCharts, withDefaultRegisterables } from 'ng2-charts';
 import { ChartConfiguration, ChartOptions } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
-import { OwnerApiService } from '../../../services/owner-api.service';
+import { OwnerApiService, OwnerRevenueReport } from '../../../services/owner-api.service';
 import { SalonRegistration } from '../../../services/salon-registration.service';
 import { PhotoUpload } from '../../../shared/components/photo-upload.component';
 import { BookingApiService, BookingItem } from '../../../services/booking-api.service';
 import { vnDate } from '../../../services/billing-api.service';
+
+type RevenueGroup = 'day' | 'week' | 'month';
 
 @Component({
   selector: 'app-dashboard',
@@ -18,11 +20,20 @@ import { vnDate } from '../../../services/billing-api.service';
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })
-export class Dashboard implements OnInit {
+export class Dashboard implements OnInit, OnDestroy {
   private readonly owner = inject(OwnerApiService);
   private readonly bookingApi = inject(BookingApiService);
   readonly error = signal('');
   readonly salon = signal<SalonRegistration | null>(null);
+  readonly revenueGroup = signal<RevenueGroup>('day');
+  readonly revenueLoading = signal(false);
+  readonly revenueError = signal('');
+  readonly revenuePeriods: { value: RevenueGroup; label: string }[] = [
+    { value: 'day', label: 'Ngày' }, { value: 'week', label: 'Tuần' }, { value: 'month', label: 'Tháng' }
+  ];
+  private revenueRequest = 0;
+  private destroyed = false;
+  readonly employeeAvatars = signal(new Map<number, string>());
   stats = signal({
     totalBookings: 0,
     revenue: 0,
@@ -34,6 +45,7 @@ export class Dashboard implements OnInit {
   async ngOnInit(): Promise<void> {
     try {
       const [salon, summary] = await Promise.all([this.owner.salon(), this.owner.summary()]);
+      if (this.destroyed) return;
       this.salon.set(salon);
       this.stats.set({
         totalBookings: summary.completedBookings,
@@ -42,15 +54,11 @@ export class Dashboard implements OnInit {
         averageRating: summary.averageRating ?? 0,
         upcomingAppointments: summary.pendingBookings + summary.confirmedBookings
       });
+      void this.loadEmployeeAvatars();
       const today = vnDate();
       const monthStart = `${today.slice(0, 7)}-01`;
-      const previousStartDate = new Date(`${monthStart}T00:00:00`);
-      previousStartDate.setMonth(previousStartDate.getMonth() - 1);
-      const previousStart = `${previousStartDate.getFullYear()}-${String(previousStartDate.getMonth() + 1).padStart(2, '0')}-01`;
-      const previousEndDate = new Date(`${monthStart}T00:00:00`);
-      previousEndDate.setDate(0);
-      const previousEnd = `${previousEndDate.getFullYear()}-${String(previousEndDate.getMonth() + 1).padStart(2, '0')}-${String(previousEndDate.getDate()).padStart(2, '0')}`;
-      const [bookings, services, reviews, revenue, previousRevenue] = await Promise.all([
+      const trendIsMonthlyTotal = this.revenueGroup() !== 'month';
+      const [bookings, services, reviews, revenue] = await Promise.all([
         (async () => {
           const items: BookingItem[] = [];
           for (let page = 0; page < 10; page++) {
@@ -61,11 +69,11 @@ export class Dashboard implements OnInit {
           return items;
         })(),
         this.owner.services(), this.owner.reviews(0),
-        this.owner.revenue(monthStart, today).catch(() => null),
-        this.owner.revenue(previousStart, previousEnd).catch(() => null)
+        this.loadRevenueTrend()
       ]);
+      if (this.destroyed) return;
       const currentMonth = bookings.filter(item => item.status === 'COMPLETED' && item.scheduledAt.slice(0, 10) >= monthStart && item.scheduledAt.slice(0, 10) <= today);
-      const monthlyRevenue = summary.monthlyRevenue ?? revenue?.gross ?? currentMonth.reduce((sum, item) => sum + (item.servicePrice || 0), 0);
+      const monthlyRevenue = summary.monthlyRevenue ?? (trendIsMonthlyTotal ? revenue?.gross : undefined) ?? currentMonth.reduce((sum, item) => sum + (item.servicePrice || 0), 0);
       const monthlyCustomers = summary.monthlyCustomers ?? new Set(currentMonth.map(item => item.customerName)).size;
       const averageRating = summary.averageRating ?? (reviews.content.length
         ? reviews.content.reduce((sum, review) => sum + review.rating, 0) / reviews.content.length
@@ -77,14 +85,86 @@ export class Dashboard implements OnInit {
         averageRating,
         upcomingAppointments: summary.pendingBookings + summary.confirmedBookings
       });
-      this.populateCharts(bookings, services, currentMonth, revenue?.points ?? [], previousRevenue?.points ?? []);
+      this.populateCharts(services, currentMonth);
       this.transactions = bookings.slice(0, 8).map(item => ({
-        id: `#${item.id}`, customer: item.customerName || 'Khách hàng', service: item.serviceName,
+        id: `#${item.id}`, customer: item.customerName || 'Khách hàng', phone: item.customerPhone?.trim() || null, service: item.serviceName,
         staff: item.employeeName || 'Chưa phân công', date: item.scheduledAt,
         amount: `${(item.servicePrice || 0).toLocaleString('vi-VN')} ₫`,
         status: item.status === 'COMPLETED' ? 'THÀNH CÔNG' : item.status === 'CANCELLED' || item.status === 'REJECTED' ? 'ĐÃ HỦY' : 'ĐANG XỬ LÝ'
       }));
     } catch { this.error.set('Không tải được dữ liệu tổng quan. Vui lòng kiểm tra kết nối và thử tải lại.'); }
+  }
+
+  ngOnDestroy(): void {
+    this.destroyed = true;
+    this.revenueRequest++;
+  }
+
+  private async loadEmployeeAvatars(): Promise<void> {
+    try {
+      const employees = await this.owner.employees();
+      if (!this.destroyed) this.employeeAvatars.set(new Map(employees
+        .filter(employee => employee.avatarUrl?.trim())
+        .map(employee => [employee.id, employee.avatarUrl!.trim()])));
+    } catch { /* Employee initials remain available if portraits cannot be loaded. */ }
+  }
+
+  employeePhotoFailed(id: number | null, url: string): void {
+    if (id === null || this.employeeAvatars().get(id) !== url) return;
+    this.employeeAvatars.update(avatars => { const next = new Map(avatars); next.delete(id); return next; });
+  }
+
+  async setRevenueGroup(group: RevenueGroup): Promise<void> {
+    if (group === this.revenueGroup() && !this.revenueError()) return;
+    this.revenueGroup.set(group);
+    await this.loadRevenueTrend();
+  }
+
+  async loadRevenueTrend(): Promise<OwnerRevenueReport | null> {
+    if (this.destroyed) return null;
+    const request = ++this.revenueRequest;
+    const group = this.revenueGroup();
+    const today = vnDate();
+    const year = Number(today.slice(0, 4));
+    const month = Number(today.slice(5, 7));
+    const previousEnd = new Date(Date.UTC(year, month - 1, 0)).toISOString().slice(0, 10);
+    const from = group === 'month' ? `${year}-01-01` : `${today.slice(0, 7)}-01`;
+    const previousFrom = group === 'month' ? `${year - 1}-01-01` : `${previousEnd.slice(0, 7)}-01`;
+    const previousTo = group === 'month' ? `${year - 1}-12-31` : previousEnd;
+    this.revenueLoading.set(true);
+    this.revenueError.set('');
+    try {
+      const [current, previous] = await Promise.all([
+        this.owner.revenue(from, today, group), this.owner.revenue(previousFrom, previousTo, group)
+      ]);
+      if (request !== this.revenueRequest) return null;
+      const length = group === 'month' ? 12 : group === 'week'
+        ? Math.max(current.points.length, previous.points.length)
+        : Math.max(new Date(Date.UTC(year, month, 0)).getUTCDate(), Number(previousEnd.slice(8, 10)));
+      const values = (report: OwnerRevenueReport): (number | null)[] => {
+        const result: (number | null)[] = Array(length).fill(null);
+        report.points.forEach((point, index) => {
+          const bucket = group === 'day' ? Number(point.date.slice(8, 10)) - 1
+            : group === 'month' ? Number(point.date.slice(5, 7)) - 1 : index;
+          result[bucket] = point.gross;
+        });
+        return result;
+      };
+      this.revenueChartData = {
+        labels: Array.from({ length }, (_, index) => group === 'week' ? `Tuần ${index + 1}`
+          : group === 'month' ? `Tháng ${index + 1}` : `${index + 1}`),
+        datasets: [
+          { ...this.revenueChartData.datasets[0], data: values(current), label: group === 'month' ? 'Năm nay' : 'Tháng này' },
+          { ...this.revenueChartData.datasets[1], data: values(previous), label: group === 'month' ? 'Năm trước' : 'Tháng trước' }
+        ]
+      };
+      return current;
+    } catch {
+      if (request === this.revenueRequest) this.revenueError.set('Không tải được xu hướng doanh thu. Vui lòng thử lại.');
+      return null;
+    } finally {
+      if (request === this.revenueRequest) this.revenueLoading.set(false);
+    }
   }
   async loadSalon(): Promise<void> {
     try { this.salon.set(await this.owner.salon()); }
@@ -95,22 +175,7 @@ export class Dashboard implements OnInit {
     catch { this.error.set('Không xóa được ảnh salon.'); }
   }
 
-  private populateCharts(bookings: BookingItem[], services: { id: number; name: string }[], completedThisMonth: BookingItem[], currentRevenue: { date: string; gross: number }[], previousRevenue: { date: string; gross: number }[]): void {
-    const today = new Date(`${vnDate()}T00:00:00`);
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
-    const previousMonth = new Date(currentYear, currentMonth - 1, 1);
-    const days = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const previousDays = new Date(previousMonth.getFullYear(), previousMonth.getMonth() + 1, 0).getDate();
-    const currentValues = Array.from({ length: days }, (_, index) => 0);
-    const previousValues = Array.from({ length: previousDays }, (_, index) => 0);
-    currentRevenue.forEach(point => { const day = Number(point.date.slice(8, 10)); if (day > 0 && day <= days) currentValues[day - 1] = point.gross; });
-    previousRevenue.forEach(point => { const day = Number(point.date.slice(8, 10)); if (day > 0 && day <= days) previousValues[day - 1] = point.gross; });
-    this.revenueChartData = { labels: Array.from({ length: days }, (_, index) => `${index + 1}`), datasets: [
-      { ...this.revenueChartData.datasets[0], data: currentValues, label: 'Tháng này' },
-      { ...this.revenueChartData.datasets[1], data: Array.from({ length: days }, (_, index) => previousValues[index] ?? 0), label: 'Tháng trước' }
-    ] };
-
+  private populateCharts(services: { id: number; name: string }[], completedThisMonth: BookingItem[]): void {
     const serviceCounts = new Map<number, number>();
     for (const item of completedThisMonth) serviceCounts.set(item.serviceId, (serviceCounts.get(item.serviceId) ?? 0) + 1);
     const topServices = services.map(service => ({ ...service, count: serviceCounts.get(service.id) ?? 0 }))
@@ -125,17 +190,20 @@ export class Dashboard implements OnInit {
     completedThisMonth.forEach(item => { const hour = Number(item.scheduledAt.slice(11, 13)); if (hour >= 8 && hour < 20) hourCounts[hour - 8]++; });
     this.peakHoursChartData = { labels: hourCounts.map((_, index) => `${String(index + 8).padStart(2, '0')}:00`), datasets: [{ data: hourCounts, backgroundColor: '#F2A4BB', borderRadius: 4 }] };
 
-    const staff = new Map<string, { revenue: number; bookings: number }>();
+    const staff = new Map<number | null, { name: string; revenue: number; bookings: number }>();
     completedThisMonth.forEach(item => {
+      const id = item.employeeId ?? null;
       const name = item.employeeName || 'Chưa phân công';
-      const current = staff.get(name) ?? { revenue: 0, bookings: 0 };
+      const current = staff.get(id) ?? { name, revenue: 0, bookings: 0 };
       current.revenue += item.servicePrice || 0; current.bookings++;
-      staff.set(name, current);
+      staff.set(id, current);
     });
     const ranked = [...staff.entries()].sort((a, b) => b[1].revenue - a[1].revenue).slice(0, 4);
     const maxRevenue = ranked[0]?.[1].revenue || 1;
-    this.staffPerformance = ranked.map(([name, values]) => ({ name, role: `${values.bookings} lịch hoàn tất tháng này`,
-      revenue: `${values.revenue.toLocaleString('vi-VN')} ₫`, growth: '', progress: Math.round(values.revenue / maxRevenue * 100), avatar: '/salon-placeholder.svg' }));
+    this.staffPerformance = ranked.map(([id, values]) => ({ id, name: values.name,
+      initials: values.name.trim().split(/\s+/).slice(-2).map(part => part[0]).join('').toUpperCase(),
+      role: `${values.bookings} lịch hoàn tất tháng này`, revenue: `${values.revenue.toLocaleString('vi-VN')} ₫`,
+      growth: '', progress: Math.round(values.revenue / maxRevenue * 100) }));
   }
 
   // Revenue Line Chart
@@ -212,7 +280,7 @@ export class Dashboard implements OnInit {
   };
 
   topServices: { name: string; count: number; color: string }[] = [];
-  staffPerformance: { name: string; role: string; revenue: string; growth: string; progress: number; avatar: string }[] = [];
+  staffPerformance: { id: number | null; name: string; initials: string; role: string; revenue: string; growth: string; progress: number }[] = [];
 
-  transactions: { id: string; customer: string; service: string; staff: string; date: string; amount: string; status: string }[] = [];
+  transactions: { id: string; customer: string; phone: string | null; service: string; staff: string; date: string; amount: string; status: string }[] = [];
 }

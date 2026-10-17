@@ -3,10 +3,13 @@ package com.bookingnailms;
 import com.bookingnailms.dto.review.ReviewRequest;
 import com.bookingnailms.entity.*;
 import com.bookingnailms.enums.BookingStatus;
+import com.bookingnailms.enums.CompletionConfirmation;
 import com.bookingnailms.repository.*;
 import com.bookingnailms.service.ReviewService;
 import com.bookingnailms.exception.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import java.util.*;
@@ -60,6 +63,8 @@ class CustomerReviewTest {
 
     private void setup() {
         when(users.findById(customer.getId())).thenReturn(Optional.of(customer));
+        when(bookings.findSalonIdById(1L)).thenReturn(Optional.of(2L));
+        when(salons.findForUpdateById(2L)).thenReturn(Optional.of(salon));
         when(bookings.findForUpdateById(1L)).thenReturn(Optional.of(booking));
     }
 
@@ -75,8 +80,10 @@ class CustomerReviewTest {
         verify(reviews, never()).save(any());
     }
 
-    @Test void savesReviewAndUpdatesSalonRating() {
+    @ParameterizedTest @EnumSource(value = CompletionConfirmation.class, names = {"CONFIRMED", "ADMIN_CONFIRMED"})
+    void savesReviewAndUpdatesSalonRating(CompletionConfirmation confirmation) {
         setup();
+        booking.setCompletionConfirmation(confirmation);
         when(salons.findForUpdateById(2L)).thenReturn(Optional.of(salon));
         when(reviews.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(reviews.findBySalonIdOrderByCreatedAtDesc(eq(2L), any(Pageable.class)))
@@ -87,6 +94,17 @@ class CustomerReviewTest {
         assertEquals(2, salon.getTotalReviews());
         assertEquals("4.0", salon.getAverageRating().toString());
         verify(salons).save(salon);
+        var order = inOrder(bookings, salons);
+        order.verify(bookings).findSalonIdById(1L);
+        order.verify(salons).findForUpdateById(2L);
+        order.verify(bookings).findForUpdateById(1L);
+    }
+
+    @ParameterizedTest @EnumSource(value = CompletionConfirmation.class, names = {"PENDING", "DISPUTED", "REOPENED"})
+    void customerMustConfirmServiceBeforeNewReview(CompletionConfirmation confirmation) {
+        setup(); booking.setCompletionConfirmation(confirmation);
+        assertThrows(BadRequestException.class, () -> service.createReview(request, customer.getId()));
+        verify(reviews, never()).save(any()); verify(salons, never()).save(any());
     }
 
     @Test void validatesStarRangeAndCommentLength() {

@@ -111,6 +111,7 @@
                         <span class="text-[12px] font-medium text-charcoal-800/60">{{ booking.date }} {{ formatTime(booking.startTime) }}</span>
                       </div>
                       <p class="text-[13px] text-charcoal-800/80">{{ booking.serviceName }}</p>
+                      <app-booking-contact [booking]="booking" />
                     </div>
                   }
                 } @else {

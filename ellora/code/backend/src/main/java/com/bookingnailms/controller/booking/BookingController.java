@@ -3,6 +3,7 @@ package com.bookingnailms.controller.booking;
 import com.bookingnailms.dto.booking.BookingRequest;
 import com.bookingnailms.dto.booking.BookingResponse;
 import com.bookingnailms.dto.booking.BookingStatusUpdateRequest;
+import com.bookingnailms.dto.booking.WalkInBookingRequest;
 import com.bookingnailms.dto.common.ApiResponse;
 import com.bookingnailms.dto.common.PageResponse;
 import com.bookingnailms.enums.BookingStatus;
@@ -125,4 +126,12 @@ public class BookingController {
         BookingResponse response = bookingService.updateBookingStatus(id, request, ownerId);
         return ResponseEntity.ok(ApiResponse.success(response, "Cập nhật trạng thái thành công."));
     }
+    @PostMapping("/owner/bookings/walk-ins")
+    public ResponseEntity<ApiResponse<BookingResponse>> createWalkIn(@AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody WalkInBookingRequest request) {
+        var booking = bookingService.createWalkIn(request, UUID.fromString(jwt.getSubject()));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(booking, "Đã thêm lịch cho khách vãng lai."));
+    }
+
 }

@@ -1,14 +1,11 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { BillingApiService, BillingConfig, PlatformBill, vnMonth, billLabels } from '../../services/billing-api.service';
-import { AdminNavigationComponent } from './admin-navigation.component';
-@Component({standalone:true,imports:[CommonModule,FormsModule,RouterLink,AdminNavigationComponent],styleUrl:'../owner/owner-data.scss',template:`
-<main class="owner-page" style="max-width:1100px;margin:auto">
- <app-admin-navigation />
- <header><h1>Phí nền tảng và thanh toán</h1><a routerLink="/admin/content">Quản lý nội dung</a></header>
+@Component({standalone:true,imports:[CommonModule,FormsModule],styleUrl:'./admin-page.scss',template:`
+<section class="admin-page">
+ <header class="admin-page-header"><div><h1>Phí nền tảng và thanh toán</h1><p>Quản lý tỷ lệ phí và đối soát thanh toán của các tiệm.</p></div></header>
  @if(error()){<p role="alert" class="error">{{error()}}</p>}
  @if(message()){<p role="status">{{message()}}</p>}
  @if(config();as c){
@@ -37,7 +34,7 @@ import { AdminNavigationComponent } from './admin-navigation.component';
   </tbody></table></div>
   <div class="pager"><button (click)="load(page-1)" [disabled]="busy()||page===0">Trang trước</button><span>{{page+1}}</span><button (click)="load(page+1)" [disabled]="busy()||last">Trang sau</button></div>
  </section>
-</main>`})
+</section>`})
 export class AdminBillingComponent implements OnInit {
  private api=inject(BillingApiService);config=signal<BillingConfig|null>(null);bills=signal<PlatformBill[]>([]);
  busy=signal(false);error=signal('');message=signal('');percent=0;month=vnMonth();maxMonth=this.month;labels=billLabels;page=0;last=true;qrFile:File|null=null;

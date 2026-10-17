@@ -1,0 +1,82 @@
+<section class="admin-page">
+  <header class="admin-page-header">
+    <div><h1>Phản ánh lịch hẹn</h1><p class="muted">Kiểm tra thông tin và liên hệ khách hàng, tiệm trước khi kết luận.</p></div>
+    <button type="button" (click)="load(page())" [disabled]="loading() || resolving()">Tải lại danh sách</button>
+  </header>
+  @if (error()) { <p role="alert" class="error">{{ error() }}</p> }
+  @if (message()) { <p role="status" class="success">{{ message() }}</p> }
+  <div class="disputes-layout">
+    <section class="card case-list" aria-labelledby="cases-heading">
+      <h2 id="cases-heading">Danh sách phản ánh</h2>
+      <label>Trạng thái<select name="caseStatus" [ngModel]="filter" (ngModelChange)="filter = $event; load(0)" [disabled]="resolving()" data-testid="dispute-filter">
+        <option value="OPEN">Chờ xử lý</option><option value="">Tất cả</option><option value="UPHELD">Giữ hoàn thành</option><option value="REOPENED">Đã trả về thực hiện</option>
+      </select></label>
+      @if (loading()) { <p role="status">Đang tải phản ánh…</p> }
+      @else {
+        <p class="muted">{{ total() }} phản ánh · Trang {{ page() + 1 }}</p>
+        <ul>
+          @for (item of cases(); track item.id) {
+            <li><button type="button" class="case-summary" [class.selected-case]="selectedId() === item.id" [attr.aria-pressed]="selectedId() === item.id"
+              [attr.data-testid]="'case-detail-' + item.id" [disabled]="resolving()" (click)="openCase(item.id)">
+              <strong>#{{ item.bookingId }} · {{ item.salonName }}</strong><span>{{ item.customerName }} · {{ item.serviceName }}</span>
+              <span>{{ formatTime(item.scheduledAt) }} · {{ statusLabels[item.status] }}</span><span class="case-reason">{{ item.reason }}</span>
+            </button></li>
+          } @empty { <li class="muted">Chưa có phản ánh phù hợp.</li> }
+        </ul>
+      }
+      <div class="pager"><button type="button" (click)="load(page() - 1)" [disabled]="loading() || resolving() || !!error() || page() === 0">Trang trước</button>
+        <button type="button" (click)="load(page() + 1)" [disabled]="loading() || resolving() || !!error() || last()">Trang sau</button></div>
+    </section>
+    <section class="card case-detail" aria-labelledby="case-heading" [attr.aria-busy]="detailLoading() || resolving()">
+      <h2 id="case-heading" #caseHeading tabindex="-1">Chi tiết phản ánh</h2>
+      @if (detailLoading()) { <p role="status">Đang tải chi tiết…</p> }
+      @if (detailError()) { <p role="alert" class="error">{{ detailError() }}</p>
+        @if (selectedId(); as id) { <button type="button" (click)="openCase(id)">Thử lại</button> }
+      }
+      @if (selected(); as item) {
+        <div class="case-heading"><strong>Phản ánh #{{ item.id }} · Lịch hẹn #{{ item.bookingId }}</strong><span>{{ statusLabels[item.status] }}</span></div>
+        <p class="muted">Gửi {{ formatTime(item.createdAt) }} · Lần hoàn thành {{ item.completionVersion }} · Giờ Việt Nam</p>
+        <button type="button" (click)="copyCase()" data-testid="copy-full-case">Sao chép toàn bộ thông tin</button>
+        <p role="status" aria-live="polite" class="copy-feedback" [class.copy-error]="copyFailed()">{{ copyFeedback() }}</p>
+        <section class="detail-group" aria-labelledby="appointment-heading">
+          <h3 id="appointment-heading">Lịch hẹn</h3>
+          <dl><dt>Dịch vụ</dt><dd>{{ item.serviceName }}</dd><dt>Giá dịch vụ</dt><dd>{{ item.servicePrice | number:'1.0-0' }} đ</dd>
+            <dt>Giờ hẹn</dt><dd>{{ formatTime(item.scheduledAt) }} (giờ Việt Nam)</dd><dt>Thời lượng</dt><dd>{{ item.durationMinutes }} phút</dd>
+            <dt>Nhân viên</dt><dd>{{ contact(item.employeeName) }}</dd><dt>Trạng thái hiện tại</dt><dd>{{ bookingLabels[item.bookingStatus] }}</dd>
+            <dt>Đánh dấu hoàn thành</dt><dd>{{ formatTime(item.completedAt) }}</dd></dl>
+        </section>
+        <section class="detail-group" aria-labelledby="customer-contact-heading">
+          <h3 id="customer-contact-heading">Liên hệ khách hàng</h3>
+          <dl><dt>Khách hàng</dt><dd>{{ contact(item.customerName) }}</dd><dt>Số điện thoại</dt><dd>{{ contact(item.customerPhone) }}</dd><dt>Email</dt><dd>{{ contact(item.customerEmail) }}</dd></dl>
+          <button type="button" (click)="copyPhone(item.customerPhone)" [disabled]="!item.customerPhone?.trim()" data-testid="copy-customer-phone">Sao chép SĐT khách</button>
+        </section>
+        <section class="detail-group" aria-labelledby="salon-contact-heading">
+          <h3 id="salon-contact-heading">Liên hệ tiệm và chủ tiệm</h3>
+          <dl><dt>Tiệm</dt><dd>{{ item.salonName }} (#{{ item.salonId }})</dd><dt>SĐT tiệm</dt><dd>{{ contact(item.salonPhone) }}</dd>
+            <dt>Email tiệm</dt><dd>{{ contact(item.salonEmail) }}</dd><dt>Địa chỉ</dt><dd>{{ contact(item.salonAddress) }}</dd>
+            <dt>Chủ tiệm</dt><dd>{{ contact(item.ownerName) }}</dd><dt>SĐT chủ tiệm</dt><dd>{{ contact(item.ownerPhone) }}</dd><dt>Email chủ tiệm</dt><dd>{{ contact(item.ownerEmail) }}</dd></dl>
+          <button type="button" (click)="copyPhone(salonPhone(item))" [disabled]="!salonPhone(item)" data-testid="copy-salon-phone">{{ item.salonPhone?.trim() ? 'Sao chép SĐT tiệm' : 'Sao chép SĐT chủ tiệm' }}</button>
+        </section>
+        <section class="detail-group" aria-labelledby="reason-heading"><h3 id="reason-heading">Lý do khách phản ánh</h3><p class="long-text">{{ item.reason }}</p></section>
+        @if (item.status === 'OPEN') {
+          <form (ngSubmit)="resolve()" class="detail-group" aria-label="Giải quyết phản ánh">
+            <h3>Kết luận của admin</h3>
+            <fieldset [disabled]="resolving()">
+              <label for="resolution-note">Kết luận (bắt buộc)<textarea id="resolution-note" name="note" [(ngModel)]="note" required maxlength="2000" rows="5" aria-describedby="resolution-help" data-testid="resolution-note"></textarea></label>
+              <label>Cách xử lý<select name="outcome" [(ngModel)]="outcome" data-testid="resolution-outcome"><option value="UPHELD">Giữ lịch hẹn Hoàn thành</option><option value="REOPENED">Trả về Đang thực hiện</option></select></label>
+              <p id="resolution-help" class="muted">Giữ hoàn thành: lịch tiếp tục được tính đã hoàn thành. Trả về Đang thực hiện: tiệm cần tiếp tục phục vụ và đánh dấu hoàn thành lại; không tạo lịch mới.</p>
+              <p class="muted">Khách hàng sẽ thấy kết luận; lịch trả về sẽ kèm yêu cầu xử lý cho tiệm. Các khoản thanh toán đã ghi nhận không tự hoàn hoặc thay đổi.</p>
+              @if (resolutionError()) { <p role="alert" class="error">{{ resolutionError() }}</p> }
+              <button type="submit" class="primary" data-testid="resolution-save">{{ resolving() ? 'Đang lưu…' : 'Lưu kết luận' }}</button>
+            </fieldset>
+          </form>
+        } @else {
+          <section class="detail-group" aria-labelledby="conclusion-heading"><h3 id="conclusion-heading">Kết luận đã lưu</h3>
+            <p class="long-text">{{ item.adminNote || 'Chưa có kết luận' }}</p><p>{{ statusLabels[item.status] }} · {{ formatTime(item.resolvedAt) }}</p>
+            @if (item.resolvedBy) { <p class="muted audit-id">Mã admin xử lý: {{ item.resolvedBy }}</p> }
+          </section>
+        }
+      } @else if (!detailLoading() && !detailError()) { <p class="muted">Chọn phản ánh trong danh sách để xem lịch hẹn và thông tin liên hệ.</p> }
+    </section>
+  </div>
+</section>

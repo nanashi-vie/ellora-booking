@@ -49,6 +49,23 @@ public class OwnerController {
         return ApiResponse.success(workingHours.update(owner(jwt), request), "Đã cập nhật giờ hoạt động của salon.");
     }
 
+    @GetMapping("/salon/closures")
+    public ApiResponse<List<com.bookingnailms.dto.salon.SalonClosureResponse>> closures(@AuthenticationPrincipal Jwt jwt) {
+        return ApiResponse.success(workingHours.ownerClosures(owner(jwt)), null);
+    }
+
+    @PostMapping("/salon/closures")
+    public ApiResponse<com.bookingnailms.dto.salon.SalonClosureResponse> closeDate(@AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody com.bookingnailms.dto.salon.SalonClosureRequest request) {
+        return ApiResponse.success(workingHours.closeDate(owner(jwt), request), "Đã lưu ngày nghỉ và từ chối/hủy các lịch hẹn bị ảnh hưởng.");
+    }
+
+    @DeleteMapping("/salon/closures/{id}")
+    public ApiResponse<Void> reopenDate(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
+        workingHours.reopenDate(owner(jwt), id);
+        return ApiResponse.success(null, "Đã xóa ngày nghỉ. Các lịch đã hủy không được tự khôi phục.");
+    }
+
     @PutMapping("/salon")
     public ApiResponse<com.bookingnailms.dto.salon.SalonProfileChangeResponse> updateSalon(@AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody com.bookingnailms.dto.salon.SalonRequest request) {

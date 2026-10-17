@@ -8,7 +8,7 @@ import { MyBookings } from '../features/customer/my-bookings/my-bookings.compone
 describe('Dev calendar and new booking features', () => {
   const api = { getSalonBookings: vi.fn(), updateBookingStatus: vi.fn(), reviewBooking: vi.fn(), getMyBookings: vi.fn() };
   const owner = { salon: vi.fn() };
-  const booking = { id: 9, status: 'PENDING', customerName: 'Khách dev', serviceName: 'Nail', scheduledAt: '2026-09-25T10:30:00', durationMinutes: 60 } as BookingItem;
+  const booking = { id: 9, status: 'PENDING', customerName: 'Khách dev', customerPhone: '0901234567', serviceName: 'Nail', scheduledAt: '2026-09-25T10:30:00', durationMinutes: 60 } as BookingItem;
   beforeEach(() => {
     vi.resetAllMocks(); sessionStorage.clear();
     TestBed.configureTestingModule({ providers: [{ provide: BookingApiService, useValue: api }, { provide: OwnerApiService, useValue: owner }] });
@@ -21,10 +21,15 @@ describe('Dev calendar and new booking features', () => {
     await service.loadSalonBookings();
     expect(service.salonName()).toBe('Ellora Nail Studio');
     expect(owner.salon).toHaveBeenCalledTimes(1);
-    expect(service.bookings()[0]).toMatchObject({ customerName: 'Khách dev', startTime: 10.5, duration: 1, status: 'pending' });
+    expect(service.bookings()[0]).toMatchObject({ customerName: 'Khách dev', customerPhone: '0901234567', startTime: 10.5, duration: 1, status: 'pending' });
     expect(service.pendingCount()).toBe(1);
     await service.startBooking(9); expect(api.updateBookingStatus).toHaveBeenLastCalledWith(9, { status: 'IN_PROGRESS' });
     await service.completeBooking(9); expect(api.updateBookingStatus).toHaveBeenLastCalledWith(9, { status: 'COMPLETED' });
+  });
+  it('returns an admin-reopened appointment to owner processing with its conclusion', async () => {
+    api.getSalonBookings.mockResolvedValue({ content: [{ ...booking, status: 'IN_PROGRESS', completionConfirmation: 'REOPENED', completionAdminNote: 'Tiệm cần tiếp tục phần còn thiếu.' }], last: true });
+    const service = TestBed.inject(BookingService); await service.loadSalonBookings();
+    expect(service.bookings()[0]).toMatchObject({ status: 'confirmed', inProgress: true, completionConfirmation: 'REOPENED', completionAdminNote: 'Tiệm cần tiếp tục phần còn thiếu.' });
   });
   it('rings once per new booking, stops at 30 seconds and can restart after leaving owner pages', async () => {
     vi.useFakeTimers();
@@ -59,7 +64,7 @@ describe('Dev calendar and new booking features', () => {
   });
   it('uses the active dev settings page for reviews and retains drafts on failure', async () => {
     const page = TestBed.runInInjectionContext(() => new MyBookings());
-    const completed = { ...booking, status: 'COMPLETED', reviewed: false } as BookingItem;
+    const completed = { ...booking, status: 'COMPLETED', reviewed: false, completionConfirmation: 'CONFIRMED' } as BookingItem;
     page.bookings.set([completed]);
     page.openReview(booking); expect(page.reviewId()).toBeNull();
     page.openReview(completed); await page.submitReview(); expect(api.reviewBooking).not.toHaveBeenCalled();

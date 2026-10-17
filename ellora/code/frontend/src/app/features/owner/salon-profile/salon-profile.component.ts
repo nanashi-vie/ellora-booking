@@ -5,8 +5,9 @@ import { OwnerApiService, ownerError } from '../../../services/owner-api.service
 import { SalonRegistration, SalonProfileChange } from '../../../services/salon-registration.service';
 import { PhotoUpload } from '../../../shared/components/photo-upload.component';
 import { SalonChangePreviewComponent } from '../../../shared/components/salon-change-preview.component';
+import { WorkingHoursComponent } from './working-hours.component';
 
-@Component({standalone:true, imports:[ReactiveFormsModule,RouterLink,PhotoUpload,SalonChangePreviewComponent], styleUrl:'../owner-data.scss', template:`
+@Component({standalone:true, imports:[ReactiveFormsModule,RouterLink,PhotoUpload,SalonChangePreviewComponent,WorkingHoursComponent], styleUrl:'../owner-data.scss', template:`
 <main class="owner-page" style="max-width:960px">
  <header><div><h1>Hồ sơ salon</h1><p class="muted">Thông tin giúp khách tìm và liên hệ với tiệm.</p></div><a routerLink="/owner/dashboard">Về tổng quan</a></header>
  @if(error()){<p role="alert" class="error">{{error()}}</p>}
@@ -14,6 +15,7 @@ import { SalonChangePreviewComponent } from '../../../shared/components/salon-ch
  @if(loading()){<p role="status">Đang tải hồ sơ…</p>}
  @else if(salon();as s){
   <p class="muted">Thông tin và ảnh chỉ cập nhật sau khi Admin duyệt. Mỗi tiệm có một yêu cầu chờ duyệt tại một thời điểm.</p>
+  <app-working-hours />
   @if(change();as c){
    <section class="card" aria-label="Yêu cầu cập nhật gần nhất">
     <h2>{{c.status === 'PENDING' ? 'Đang chờ Admin duyệt' : c.status === 'APPROVED' ? 'Yêu cầu gần nhất đã được duyệt' : 'Yêu cầu gần nhất bị từ chối'}}</h2>

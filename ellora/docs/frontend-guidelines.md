@@ -50,6 +50,7 @@ frontend/src/app/features/
 - Dùng interceptor cho JWT token khi auth đã ổn định.
 - Dùng service + RxJS trước; không thêm NgRx nếu chưa thật sự cần.
 - Form nên đơn giản và validate input rõ ràng.
+- Các trang `/admin/...` dùng `AdminLayout` chung cho header, menu, chiều rộng và lề. Trang con dùng `.admin-page`, `.admin-page-header` và `features/admin-content/admin-page.scss`; không thêm menu hoặc max-width/padding riêng ở từng trang. Bảng cuộn ngang trong `.table-wrap` để giữ khung mobile.
 
 ---
 
