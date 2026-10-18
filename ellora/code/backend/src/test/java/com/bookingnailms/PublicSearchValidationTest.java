@@ -25,10 +25,10 @@ class PublicSearchValidationTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 10, 18);
 
     @Test void normalizesTextAndPassesVietnamCutoffAndPaginationToOneRepositoryQuery() {
-        when(repo.searchPublic(any(), any(), eq(page))).thenReturn(Page.empty(page));
+        when(repo.searchPublic(any(), any(), any(), eq(page))).thenReturn(Page.empty(page));
         service.searchSalons(request("  Sơn gel  ", "  Quận 9  ", TODAY, null, 0.0, 0.0, 5.0, "distance"), page);
         verify(repo).searchPublic(eq(request("Sơn gel", "Quận 9", TODAY, null, 0.0, 0.0, 5.0, "distance")),
-                eq(TODAY.atTime(11, 1)), eq(page));
+                eq(TODAY.atTime(11, 1)), eq(TODAY.atTime(10,0,20)), eq(page));
         verifyNoMoreInteractions(repo);
     }
 
@@ -71,20 +71,20 @@ class PublicSearchValidationTest {
     }
 
     @Test void acceptsFirstWholeMinuteAndInclusiveCoordinateRadiusAndDateBounds() {
-        when(repo.searchPublic(any(), any(), eq(page))).thenReturn(Page.empty(page));
+        when(repo.searchPublic(any(), any(), any(), eq(page))).thenReturn(Page.empty(page));
         service.searchSalons(request(null,null,TODAY,LocalTime.of(11,1),-90.0,180.0,100.0,"rating"),page);
         service.searchSalons(request(null,null,TODAY.plusYears(1),LocalTime.NOON,90.0,-180.0,null,null),page);
-        verify(repo, times(2)).searchPublic(any(), any(), eq(page));
+        verify(repo, times(2)).searchPublic(any(), any(), any(), eq(page));
     }
 
     @Test void exactOneHourBoundaryAcrossVietnamMidnightIsAccepted() {
         var lateClock = Clock.fixed(Instant.parse("2026-10-18T16:30:00Z"), ZoneOffset.UTC);
         var lateService = new SalonService(repo, mock(UserRepository.class), lateClock);
-        when(repo.searchPublic(any(), any(), eq(page))).thenReturn(Page.empty(page));
+        when(repo.searchPublic(any(), any(), any(), eq(page))).thenReturn(Page.empty(page));
         assertThrows(BadRequestException.class, () -> lateService.searchSalons(request(null,null,TODAY.plusDays(1),LocalTime.of(0,29),null,null,null,null),page));
         lateService.searchSalons(request(null,null,TODAY.plusDays(1),LocalTime.of(0,30),null,null,null,null),page);
         lateService.searchSalons(request(null,null,TODAY,null,null,null,null,null),page);
-        verify(repo,times(2)).searchPublic(any(), eq(TODAY.plusDays(1).atTime(0,30)),eq(page));
+        verify(repo,times(2)).searchPublic(any(), eq(TODAY.plusDays(1).atTime(0,30)),eq(TODAY.atTime(23,30)),eq(page));
     }
 
     @Test void textAndOffsetLimitsAreCheckedBeforeQuerying() {

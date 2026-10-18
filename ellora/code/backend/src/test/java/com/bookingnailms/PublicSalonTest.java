@@ -16,14 +16,15 @@ class PublicSalonTest {
  @Test void listQueriesOnlyApprovedSalonsAndMapsDatabaseIds() {
   var repo=mock(SalonRepository.class);var service=new SalonService(repo,mock(UserRepository.class));
   var page=PageRequest.of(0,12);var salon=SalonSummaryResponse.builder().id(42L).name("Salon thật").build();
-  when(repo.searchPublic(any(),any(),eq(page))).thenReturn(new PageImpl<>(List.of(salon)));
+  when(repo.searchPublic(any(),any(),any(),eq(page))).thenReturn(new PageImpl<>(List.of(salon)));
   assertEquals(42L,service.searchSalons("",page).getContent().get(0).getId());
-  when(repo.searchPublic(argThat(filters -> filters.keyword().equals("Hồ Chí Minh")),any(),eq(page))).thenReturn(Page.empty(page));
+  when(repo.searchPublic(argThat(filters -> filters.keyword().equals("Hồ Chí Minh")),any(),any(),eq(page))).thenReturn(Page.empty(page));
   assertTrue(service.searchSalons(" Hồ Chí Minh ",page).getContent().isEmpty());
  }
  @Test void unpublishedSalonCannotExposeDetailsServicesEmployeesOrReviews() {
   var salons=mock(SalonService.class);var services=mock(NailServiceService.class);var employees=mock(EmployeeService.class);var reviews=mock(ReviewService.class);
   var controller=new PublicSalonController(salons,services,employees,reviews,mock(SalonWorkingHourService.class));
+  doThrow(new ResourceNotFoundException("Salon not found")).when(salons).requireActiveSalon(42L);
   for(var status:List.of(SalonStatus.PENDING_APPROVAL,SalonStatus.REJECTED,SalonStatus.SUSPENDED)) {
    when(salons.getSalonById(42L)).thenReturn(SalonResponse.builder().id(42L).status(status).build());
    assertThrows(ResourceNotFoundException.class,()->controller.detail(42L));

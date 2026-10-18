@@ -40,7 +40,7 @@ public class OwnerController {
 
     @GetMapping("/salon/working-hours")
     public ApiResponse<List<com.bookingnailms.dto.salon.SalonWorkingHourRequest>> workingHours(@AuthenticationPrincipal Jwt jwt) {
-        return ApiResponse.success(workingHours.get(salons.getMySalon(owner(jwt)).getId()), null);
+        return ApiResponse.success(workingHours.get(salons.getMySalonId(owner(jwt))), null);
     }
 
     @PutMapping("/salon/working-hours")
@@ -80,7 +80,7 @@ public class OwnerController {
 
     @GetMapping("/services")
     public ApiResponse<List<ServiceResponse>> services(@AuthenticationPrincipal Jwt jwt) {
-        return ApiResponse.success(services.getServicesBySalon(salons.getMySalon(owner(jwt)).getId()), null);
+        return ApiResponse.success(services.getServicesBySalon(salons.getMySalonId(owner(jwt))), null);
     }
 
     @PostMapping("/services")
@@ -101,7 +101,7 @@ public class OwnerController {
 
     @GetMapping("/employees")
     public ApiResponse<List<EmployeeResponse>> employees(@AuthenticationPrincipal Jwt jwt) {
-        return ApiResponse.success(employees.getSalonEmployees(salons.getMySalon(owner(jwt)).getId()), null);
+        return ApiResponse.success(employees.getSalonEmployees(salons.getMySalonId(owner(jwt))), null);
     }
 
     @GetMapping("/employees/{id}/schedules")
@@ -127,7 +127,7 @@ public class OwnerController {
 
     @GetMapping("/reviews")
     public ApiResponse<PageResponse<ReviewResponse>> reviews(@AuthenticationPrincipal Jwt jwt, @RequestParam(defaultValue = "0") int page) {
-        return ApiResponse.success(reviews.getSalonReviews(salons.getMySalon(owner(jwt)).getId(), PageRequest.of(Math.max(0, page), 20)), null);
+        return ApiResponse.success(reviews.getSalonReviews(salons.getMySalonId(owner(jwt)), PageRequest.of(Math.max(0, page), 20)), null);
     }
 
     @PostMapping("/reviews/{id}/reply")

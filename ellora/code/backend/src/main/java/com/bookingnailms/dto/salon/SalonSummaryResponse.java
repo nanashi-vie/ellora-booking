@@ -23,4 +23,6 @@ public class SalonSummaryResponse {
     private Double latitude;
     private Double longitude;
     private Double distanceKm;
+    private com.bookingnailms.enums.SubscriptionTier subscriptionTier;
+    private String subscriptionBadge;
 }

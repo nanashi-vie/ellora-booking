@@ -1,6 +1,5 @@
 import { Component, inject, effect, OnInit, OnDestroy, signal, PLATFORM_ID, NgZone } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { MockDataService } from '../../../services/mock-data.service';
 import { SalonCarouselComponent } from '../../../shared/components/salon-carousel/salon-carousel.component';
 import { RouterModule } from '@angular/router';
 import { RevealOnScrollDirective } from '../../../shared/directives/reveal-on-scroll.directive';
@@ -8,16 +7,16 @@ import { SalonApiService } from '../../../services/salon-api.service';
 import { Salon } from '../../../models/ellora.model';
 import { SalonSearchFormComponent } from '../../../shared/components/salon-search-form/salon-search-form.component';
 import { DEFAULT_SEARCH_FILTERS, PublicSalonSearchService, SearchPosition } from '../../../services/public-salon-search.service';
+import { SeasonalSceneComponent } from '../../../shared/components/seasonal-scene/seasonal-scene.component';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterModule, SalonCarouselComponent, RevealOnScrollDirective, SalonSearchFormComponent],
+  imports: [CommonModule, RouterModule, SalonCarouselComponent, RevealOnScrollDirective, SalonSearchFormComponent, SeasonalSceneComponent],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss'
 })
 export class Home implements OnInit, OnDestroy {
-  private dataService = inject(MockDataService);
   private salonApi = inject(SalonApiService);
   private platformId = inject(PLATFORM_ID);
   private zone = inject(NgZone);
@@ -48,8 +47,6 @@ export class Home implements OnInit, OnDestroy {
   readonly nearbyError = signal('');
   readonly locationAttempted = signal(false);
   readonly nearbyQuery = { nearby: '1', radiusKm: 5, sort: 'distance' };
-
-  categories = this.dataService.categories;
 
   showBackToTop = signal(false);
 
@@ -102,7 +99,8 @@ export class Home implements OnInit, OnDestroy {
 
   scrollToTop(): void {
     if (!isPlatformBrowser(this.platformId)) return;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const reduced = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: reduced ? 'instant' : 'smooth' });
   }
 
 }

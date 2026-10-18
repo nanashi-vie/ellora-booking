@@ -91,7 +91,7 @@ public class ReviewService {
             throw new ResourceNotFoundException("Salon", "id", salonId);
         }
 
-        Page<Review> reviewsPage = reviewRepository.findBySalonIdOrderByCreatedAtDesc(salonId, pageable);
+        Page<Review> reviewsPage = reviewRepository.findWithDetailsBySalonIdOrderByCreatedAtDesc(salonId, pageable);
 
         List<ReviewResponse> responses = reviewsPage.getContent().stream()
                 .map(this::mapToReviewResponse)

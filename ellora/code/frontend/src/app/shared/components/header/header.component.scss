@@ -25,26 +25,22 @@
 @media(max-width: 420px) { .header-search-panel { padding: 18px; } }
 
 .header-shell {
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 252, 253, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.72);
   box-shadow:
     0 18px 44px rgba(17, 24, 39, 0.08),
     0 1px 0 rgba(255, 255, 255, 0.58) inset,
     0 0 0 1px rgba(17, 24, 39, 0.035);
-  backdrop-filter: blur(10px) saturate(1.04);
-  -webkit-backdrop-filter: blur(10px) saturate(1.04);
 
   &--home {
-    background: rgba(255, 255, 255, 0.76);
+    background: rgba(255, 250, 252, 0.98);
     border-color: rgba(255, 255, 255, 0.66);
   }
 }
 
 @media (max-width: 768px) {
   .header-shell {
-    background: rgba(255, 255, 255, 0.94);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    background: rgba(255, 252, 253, 0.98);
   }
 }
 

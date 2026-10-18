@@ -1,17 +1,34 @@
 @if (variant() === 'home') {
   <a
     [routerLink]="['/salon', salon().id]"
+    [class.vip-seasonal-card]="salon().subscriptionTier === 'VIP'"
+    [class.is-paused]="seasons.paused()"
+    [attr.data-season]="salon().subscriptionTier === 'VIP' ? seasons.season() : null"
     class="group block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4 focus-visible:ring-offset-surface-soft"
   >
+    @if (salon().subscriptionTier === 'VIP') {
+      <span class="vip-seasonal-sprig" aria-hidden="true">
+        @if (seasons.season() === 'winter') {
+          <span class="snowman"><span class="snowman-body"></span><span class="snowman-head"></span><span class="snowman-hat"></span><span class="snowman-scarf"></span></span>
+        } @else if (seasons.season() === 'summer') {
+          <span class="summer-ring"></span>
+        } @else {
+          <span class="sprig-stem"></span>
+          @for (leaf of [0, 1, 2, 3, 4]; track leaf) {
+            <span [class]="'sprig-leaf sprig-leaf--' + leaf"></span>
+          }
+        }
+      </span>
+    }
     <div class="flex h-full flex-col gap-3">
       <div class="w-full aspect-[3/2] bg-surface overflow-hidden rounded-2xl">
         <img
           [src]="salon().images[0]"
           [alt]="salon().name"
           loading="lazy"
+          decoding="async"
+          width="600" height="400"
           class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          appRevealOnScroll="image"
-          [revealDuration]="820"
         />
       </div>
 
@@ -29,6 +46,7 @@
           </span>
         </div>
 
+        @if (salon().subscriptionTier) { <app-salon-subscription-badge class="mt-2" [tier]="salon().subscriptionTier" /> }
         <p class="mt-1 truncate text-sm font-medium text-brand-darker/60">
           {{ salon().district ? salon().district + ', ' : '' }}{{ salon().city }}
         </p>
@@ -50,9 +68,9 @@
         [src]="salon().images[0]"
         [alt]="salon().name"
         loading="lazy"
+        decoding="async"
+        width="600" height="450"
         class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        appRevealOnScroll="image"
-        [revealDuration]="820"
       />
       <!-- Rating Badge -->
       <div class="absolute top-3 right-3 flex items-center gap-1 text-xs font-medium text-brand-darker bg-white/40 backdrop-blur-md px-2 py-1 rounded">
@@ -69,6 +87,7 @@
         {{ salon().name }}
       </h3>
 
+      @if (salon().subscriptionTier) { <app-salon-subscription-badge [tier]="salon().subscriptionTier" /> }
       <p class="text-brand-darker/80 text-sm line-clamp-2 min-h-[40px]">
         {{ salon().description || 'Dịch vụ làm móng và chăm sóc cá nhân cao cấp.' }}
       </p>

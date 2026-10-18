@@ -1,6 +1,7 @@
 package com.bookingnailms.entity;
 
 import com.bookingnailms.enums.SalonStatus;
+import com.bookingnailms.enums.SubscriptionTier;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -59,6 +60,17 @@ public class Salon {
     private Double latitude;
 
     private Double longitude;
+
+    @Enumerated(EnumType.STRING) @Column(length = 16)
+    private SubscriptionTier subscriptionTier;
+    private LocalDateTime subscriptionStartsAt;
+    private LocalDateTime subscriptionExpiresAt;
+
+    public SubscriptionTier effectiveSubscriptionTier(LocalDateTime now) {
+        return status == SalonStatus.ACTIVE && subscriptionTier != null && subscriptionStartsAt != null
+                && subscriptionExpiresAt != null && subscriptionStartsAt.isBefore(subscriptionExpiresAt)
+                && !subscriptionStartsAt.isAfter(now) && subscriptionExpiresAt.isAfter(now) ? subscriptionTier : null;
+    }
 
     @Column(precision = 3, scale = 2)
     @Builder.Default

@@ -1,5 +1,6 @@
 import {
   Directive,
+  ChangeDetectorRef,
   ElementRef,
   HostBinding,
   Input,
@@ -19,15 +20,17 @@ type RevealVariant = 'fade-up' | 'fade' | 'image' | 'dashboard';
 export class RevealOnScrollDirective implements OnInit, OnDestroy {
   private readonly elementRef = inject(ElementRef<HTMLElement>);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly cdr = inject(ChangeDetectorRef);
   private observer?: IntersectionObserver;
   private releaseTimer?: ReturnType<typeof setTimeout>;
   private hasEntered = false;
   private hasReleasedStyles = false;
+  private destroyed = false;
 
   @Input('appRevealOnScroll') variant: RevealVariant = 'fade-up';
   @Input() revealDelay = 0;
-  @Input() revealDuration = 760;
-  @Input() revealDistance = 28;
+  @Input() revealDuration = 360;
+  @Input() revealDistance = 18;
 
   @HostBinding('style.opacity')
   get opacity(): string {
@@ -85,7 +88,7 @@ export class RevealOnScrollDirective implements OnInit, OnDestroy {
   }
 
   @HostBinding('style.willChange')
-  willChange = 'opacity, transform';
+  get willChange(): string { return this.hasReleasedStyles ? '' : 'opacity, transform'; }
 
   @HostBinding('class.reveal-has-entered')
   get revealHasEntered(): boolean {
@@ -93,7 +96,7 @@ export class RevealOnScrollDirective implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    if (!isPlatformBrowser(this.platformId) || this.prefersReducedMotion()) {
+    if (!isPlatformBrowser(this.platformId) || this.prefersReducedMotion() || typeof IntersectionObserver !== 'function') {
       this.hasEntered = true;
       this.hasReleasedStyles = true;
       return;
@@ -118,18 +121,23 @@ export class RevealOnScrollDirective implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     this.observer?.disconnect();
     clearTimeout(this.releaseTimer);
   }
 
   private enter(): void {
+    if (this.destroyed || this.hasEntered) return;
     this.hasEntered = true;
+    this.cdr.markForCheck();
     this.releaseTimer = setTimeout(() => {
+      if (this.destroyed) return;
       this.hasReleasedStyles = true;
+      this.cdr.markForCheck();
     }, this.revealDelay + this.revealDuration + 80);
   }
 
   private prefersReducedMotion(): boolean {
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    return typeof window.matchMedia !== 'function' || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 }

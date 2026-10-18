@@ -56,26 +56,26 @@ public class PublicSalonController {
 
     @GetMapping("/{id}/working-hours")
     public ApiResponse<List<com.bookingnailms.dto.salon.SalonWorkingHourRequest>> workingHours(@PathVariable Long id) {
-        active(id);
+        salons.requireActiveSalon(id);
         return ApiResponse.success(workingHours.get(id), null);
     }
 
     @GetMapping("/{id}/closures")
     public ApiResponse<List<java.time.LocalDate>> closures(@PathVariable Long id,
             @RequestParam java.time.LocalDate from, @RequestParam java.time.LocalDate to) {
-        active(id);
+        salons.requireActiveSalon(id);
         return ApiResponse.success(workingHours.closedDates(id, from, to), null);
     }
 
     @GetMapping("/{id}/services")
     public ApiResponse<List<ServiceResponse>> services(@PathVariable Long id) {
-        active(id);
+        salons.requireActiveSalon(id);
         return ApiResponse.success(services.getServicesBySalon(id), null);
     }
 
     @GetMapping("/{id}/employees")
     public ApiResponse<List<EmployeeResponse>> employees(@PathVariable Long id) {
-        active(id);
+        salons.requireActiveSalon(id);
         // Public booking needs names and avatars, never employees' phone numbers.
         var result = employees.getSalonEmployees(id).stream().map(e -> EmployeeResponse.builder()
                 .id(e.getId()).fullName(e.getFullName()).avatarUrl(e.getAvatarUrl()).bio(e.getBio()).active(e.isActive()).build()).toList();
@@ -84,7 +84,7 @@ public class PublicSalonController {
 
     @GetMapping("/{id}/reviews")
     public ApiResponse<PageResponse<ReviewResponse>> reviews(@PathVariable Long id, @RequestParam(defaultValue = "0") int page) {
-        active(id);
+        salons.requireActiveSalon(id);
         return ApiResponse.success(reviews.getSalonReviews(id, PageRequest.of(Math.max(0, page), 20)), null);
     }
 }

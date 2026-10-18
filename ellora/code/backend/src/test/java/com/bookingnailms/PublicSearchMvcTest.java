@@ -41,9 +41,9 @@ class PublicSearchMvcTest {
     @MockBean SalonWorkingHourService workingHours;
 
     @BeforeEach void pageResult() {
-        when(repo.searchPublic(any(), any(), any())).thenAnswer(call -> new PageImpl<>(List.of(
+        when(repo.searchPublic(any(), any(), any(), any())).thenAnswer(call -> new PageImpl<>(List.of(
                 SalonSummaryResponse.builder().id(7L).name("Tiệm thật").district("Quận 9")
-                        .latitude(0.0).longitude(0.0).distanceKm(0.0).build()), call.getArgument(2), 1));
+                        .latitude(0.0).longitude(0.0).distanceKm(0.0).build()), call.getArgument(3), 1));
     }
 
     @Test void anonymousCanSearchWithAllTypedFiltersAndReceiveApprovedMapFields() throws Exception {
@@ -58,14 +58,14 @@ class PublicSearchMvcTest {
                 .andExpect(jsonPath("$.data.pageNumber").value(0)).andExpect(jsonPath("$.data.pageSize").value(50));
         verify(repo).searchPublic(argThat(f -> f.keyword().equals("Sơn gel") && f.location().equals("Quận 9")
                 && f.date().toString().equals(date) && f.time().toString().equals("12:30") && f.sort().equals("distance")),
-                any(), argThat(p -> p.getPageNumber() == 0 && p.getPageSize() == 50));
+                any(), any(), argThat(p -> p.getPageNumber() == 0 && p.getPageSize() == 50));
     }
 
     @Test void legacyQueryKeepsNewestDefaultsAndClampsSmallPageSize() throws Exception {
         mvc.perform(get("/customer/salons").param("keyword","Nail").param("size","0"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.pageSize").value(1));
         verify(repo).searchPublic(argThat(f -> f.keyword().equals("Nail") && f.location().isEmpty()
-                && f.latitude() == null && f.sort().equals("newest")), any(), any());
+                && f.latitude() == null && f.sort().equals("newest")), any(), any(), any());
     }
 
     @ParameterizedTest

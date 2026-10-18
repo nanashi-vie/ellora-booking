@@ -1,0 +1,35 @@
+<section class="plans" aria-labelledby="salon-plans-heading" [attr.aria-busy]="loading()">
+  <div class="plans__heading">
+    <p class="plans__eyebrow">GÓI ĐĂNG KÝ SALON</p>
+    <h2 id="salon-plans-heading">Để tiệm được nhiều người biết đến hơn</h2>
+    <p>Chọn huy hiệu và mức ưu tiên phù hợp với tiệm. Mỗi lần kích hoạt có thời hạn 1 tháng.</p>
+  </div>
+  @if (error()) {
+    <div class="plans__error" role="alert">Chưa tải được giá gói. <button type="button" (click)="load()">Thử lại</button></div>
+  }
+  <div class="plans__grid">
+    @for (tier of tiers; track tier) {
+      @let current = plan(tier);
+      <article class="plan" [class.plan--vip]="tier === 'VIP'">
+        <div class="plan__top"><h3>{{ tier === 'VIP' ? 'Gói VIP' : 'Gói Thường' }}</h3><span class="plan__order">Ưu tiên {{ tier === 'VIP' ? '01' : '02' }}</span></div>
+        <app-salon-subscription-badge [tier]="tier" />
+        <div class="plan__price">
+          @if (loading()) { <p class="plan__unavailable" role="status">Đang tải giá…</p> }
+          @else if (current?.monthlyPrice != null) {
+            <p><strong>{{ current!.monthlyPrice | number:'1.0-0' }}</strong><span> ₫ / tháng</span></p>
+          } @else { <p class="plan__unavailable">{{ error() ? 'Chưa tải được giá' : 'Giá đang được cập nhật' }}</p> }
+          <span class="plan__availability">{{ !loading() && current?.registrationAvailable ? 'Đang nhận đăng ký' : 'Chưa mở đăng ký' }}</span>
+        </div>
+        <ul>
+          <li>Huy hiệu <strong>{{ tier === 'VIP' ? 'Shop đối tác' : 'Shop yêu thích' }}</strong> trên tiệm.</li>
+          <li>{{ tier === 'VIP' ? 'Hiển thị trước gói Thường và tiệm chưa có gói.' : 'Hiển thị sau VIP, trước tiệm chưa có gói.' }}</li>
+          <li>Hiệu lực 1 tháng sau khi admin xác nhận thanh toán.</li>
+        </ul>
+      </article>
+    }
+  </div>
+  <div class="plans__footer">
+    <div><p>Chuyển khoản trước, admin xác nhận đã nhận tiền rồi kích hoạt.</p><span>Sau khi salon được duyệt, chọn gói trong trang quản lý để nhận QR, số tiền và nội dung chuyển khoản. Gói chỉ có hiệu lực sau khi admin đối soát. Trong từng nhóm gói, kết quả vẫn theo cách sắp xếp của khách.</span></div>
+    <a routerLink="/business-registration">Đăng ký salon</a>
+  </div>
+</section>
