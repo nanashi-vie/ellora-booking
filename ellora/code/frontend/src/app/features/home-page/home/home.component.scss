@@ -1,4 +1,6 @@
 // Styles for Home component
+.seasonal-home-hero { position: relative; margin-top: 112px; }
+.seasonal-home-hero .hero-section > div > p { padding-inline: 16px; }
 
 .home-search { width: min(1000px, calc(100% - 32px)); margin-top: 16px; }
 .home-nearby { max-width: 1280px; margin: 0 auto; padding-top: 32px; }
@@ -84,9 +86,6 @@
     opacity: 0.8;
   }
 
-  &.reveal-has-entered img {
-    animation: dashboard-float 7s ease-in-out 1s infinite;
-  }
 }
 
 // Trust indicator counter animation
@@ -135,21 +134,6 @@
   100% {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes dashboard-float {
-  0%, 100% {
-    transform: translate3d(0, 0, 0);
-  }
-  50% {
-    transform: translate3d(0, -6px, 0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dashboard-showcase.reveal-has-entered img {
-    animation: none;
   }
 }
 

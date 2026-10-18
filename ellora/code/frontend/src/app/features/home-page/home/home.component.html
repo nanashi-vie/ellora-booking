@@ -1,5 +1,6 @@
 <div class="flex flex-col w-full">
   <!-- Hero Section -->
+  <div class="seasonal-home-hero">
   <section class="hero-section w-full min-h-[78vh] md:min-h-[78vh] flex items-center relative">
     <div class="max-w-7xl mx-auto flex flex-col items-center text-center gap-10 w-full my-auto relative z-10 translate-y-3 md:translate-y-5">
 
@@ -27,6 +28,8 @@
 
     </div>
   </section>
+  <app-seasonal-scene scene="home-border" />
+  </div>
 
 
   <div class="home-below-surface">
@@ -54,6 +57,7 @@
         </div>
       }
     </section>
+    <p class="home-salon-status">Ưu tiên tiệm có gói VIP, sau đó gói Thường; khoảng cách và đánh giá được so sánh trong từng nhóm.</p>
     @if (salonLoading()) { <p role="status" class="home-salon-status">Đang tải danh sách salon…</p> }
     @else if (salonError()) { <div class="home-salon-status"><p role="alert" class="home-search-error">{{ salonError() }}</p><button type="button" (click)="loadSalons()">Tải lại danh sách</button></div> }
     @else if (salons().length) { <app-salon-carousel title="Khám phá salon" viewAllLink="/search" [salons]="salons()" [animateHeader]="false" [animateCards]="false" /> }
@@ -74,7 +78,7 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
-          <div class="min-h-[265px] rounded-3xl border border-[#E8DDD6] bg-[#FFFFFF] px-7 py-8 md:px-8 md:py-9 flex flex-col items-start text-left" appRevealOnScroll="fade-up" [revealDelay]="120" [revealDistance]="24">
+          <div class="min-h-[265px] rounded-3xl border border-[#E8DDD6] bg-[#FFFFFF] px-7 py-8 md:px-8 md:py-9 flex flex-col items-start text-left" appRevealOnScroll="fade-up" [revealDelay]="60" [revealDistance]="18">
             <div class="w-14 h-14 rounded-2xl bg-[#F9A8B6]/18 text-brand flex items-center justify-center">
               <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M12 21s7-5.2 7-11a7 7 0 1 0-14 0c0 5.8 7 11 7 11z" />
@@ -87,7 +91,7 @@
             </p>
           </div>
 
-          <div class="min-h-[265px] rounded-3xl border border-[#E8DDD6] bg-[#FFFFFF] px-7 py-8 md:px-8 md:py-9 flex flex-col items-start text-left" appRevealOnScroll="fade-up" [revealDelay]="260" [revealDistance]="24">
+          <div class="min-h-[265px] rounded-3xl border border-[#E8DDD6] bg-[#FFFFFF] px-7 py-8 md:px-8 md:py-9 flex flex-col items-start text-left" appRevealOnScroll="fade-up" [revealDelay]="100" [revealDistance]="18">
             <div class="w-14 h-14 rounded-2xl bg-[#F9A8B6]/18 text-brand flex items-center justify-center">
               <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M4 7h16" />
@@ -104,7 +108,7 @@
             </p>
           </div>
 
-          <div class="min-h-[265px] rounded-3xl border border-[#E8DDD6] bg-[#FFFFFF] px-7 py-8 md:px-8 md:py-9 flex flex-col items-start text-left" appRevealOnScroll="fade-up" [revealDelay]="400" [revealDistance]="24">
+          <div class="min-h-[265px] rounded-3xl border border-[#E8DDD6] bg-[#FFFFFF] px-7 py-8 md:px-8 md:py-9 flex flex-col items-start text-left" appRevealOnScroll="fade-up" [revealDelay]="140" [revealDistance]="18">
             <div class="w-14 h-14 rounded-2xl bg-[#F9A8B6]/18 text-brand flex items-center justify-center">
               <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect x="4" y="5" width="16" height="15" rx="3" />
@@ -127,35 +131,35 @@
     <section class="b2b-showcase w-full px-6 py-24 md:py-32">
       <div class="max-w-7xl mx-auto w-full flex flex-col md:flex-row items-center gap-14 md:gap-16">
         <div class="flex-1 flex flex-col items-start gap-6">
-          <h2 class="font-bold text-3xl md:text-4xl text-brand-darker max-w-sm" appRevealOnScroll="fade-up" [revealDelay]="120">Phát triển Salon của bạn cùng Ellora</h2>
-          <p class="text-brand-darker/80 text-sm md:text-base leading-relaxed max-w-md" appRevealOnScroll="fade-up" [revealDelay]="240">
+          <h2 class="font-bold text-3xl md:text-4xl text-brand-darker max-w-sm" appRevealOnScroll="fade-up" [revealDelay]="60">Phát triển Salon của bạn cùng Ellora</h2>
+          <p class="text-brand-darker/80 text-sm md:text-base leading-relaxed max-w-md" appRevealOnScroll="fade-up" [revealDelay]="80">
             Quản lý lịch hẹn, khách hàng, địa điểm, nhân viên. Phân tích doanh nghiệp của bạn với các tính năng báo cáo và thống kê nâng cao.
           </p>
           
           <ul class="flex flex-col gap-3">
-            <li class="flex items-center gap-3 text-sm font-medium text-brand-darker" appRevealOnScroll="fade-up" [revealDelay]="360" [revealDistance]="20">
+            <li class="flex items-center gap-3 text-sm font-medium text-brand-darker" appRevealOnScroll="fade-up" [revealDelay]="120" [revealDistance]="18">
               <svg class="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="1.5"></circle><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m9 12 2 2 4-4" /></svg>
               Đặt lịch & Quản lí lịch hẹn
             </li>
-            <li class="flex items-center gap-3 text-sm font-medium text-brand-darker" appRevealOnScroll="fade-up" [revealDelay]="500" [revealDistance]="20">
+            <li class="flex items-center gap-3 text-sm font-medium text-brand-darker" appRevealOnScroll="fade-up" [revealDelay]="160" [revealDistance]="18">
               <svg class="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="1.5"></circle><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m9 12 2 2 4-4" /></svg>
               Theo dõi hiệu suất Nhân viên
             </li>
-            <li class="flex items-center gap-3 text-sm font-medium text-brand-darker" appRevealOnScroll="fade-up" [revealDelay]="640" [revealDistance]="20">
+            <li class="flex items-center gap-3 text-sm font-medium text-brand-darker" appRevealOnScroll="fade-up" [revealDelay]="200" [revealDistance]="18">
               <svg class="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="1.5"></circle><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m9 12 2 2 4-4" /></svg>
               Phân tích Doanh thu Thời gian thực
             </li>
           </ul>
           
-          <button routerLink="/business-registration" class="mt-4 bg-brand hover:bg-brand-dark text-brand-darker text-sm font-medium px-6 py-2.5 rounded-full transition-colors flex items-center gap-2" appRevealOnScroll="fade" [revealDelay]="780">
+          <button routerLink="/business-registration" class="mt-4 bg-brand hover:bg-brand-dark text-brand-darker text-sm font-medium px-6 py-2.5 rounded-full transition-colors flex items-center gap-2" appRevealOnScroll="fade" [revealDelay]="200">
             Tham gia với tư cách Đối tác
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="14" rx="2" stroke-width="1.5"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2" stroke-width="1.5"/></svg>
           </button>
         </div>
         
         <!-- Dashboard Mockup -->
-        <div class="dashboard-showcase flex-1 w-full rounded-xl overflow-hidden shadow-2xl" appRevealOnScroll="dashboard" [revealDelay]="420" [revealDuration]="900">
-           <img src="/owner-pageDemo.png" alt="Dashboard Mockup" class="w-full h-auto object-cover" />
+        <div class="dashboard-showcase flex-1 w-full rounded-xl overflow-hidden shadow-2xl" appRevealOnScroll="dashboard" [revealDelay]="120" [revealDuration]="400">
+           <img src="/owner-pageDemo.png" alt="Dashboard Mockup" loading="lazy" decoding="async" fetchpriority="low" width="1280" height="1024" class="w-full h-auto object-cover" />
         </div>
       </div>
     </section>

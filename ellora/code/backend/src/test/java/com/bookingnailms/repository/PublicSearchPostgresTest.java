@@ -30,6 +30,7 @@ class PublicSearchPostgresTest {
     private static HikariDataSource dataSource;
     private static SessionFactory factory;
     private static final AtomicInteger selects = new AtomicInteger();
+    private static boolean ranked;
     private EntityManager em;
     private SalonSearchRepositoryImpl repository;
     private static final LocalDate SUNDAY = LocalDate.of(2026, 10, 18);
@@ -57,7 +58,7 @@ class PublicSearchPostgresTest {
                 throw new AssertionError("Read-only search fixture must only issue SELECT queries");
             }
             selects.incrementAndGet();
-            return FIXTURES + sql;
+            return FIXTURES.replace("/*ranked*/false",Boolean.toString(ranked)) + sql;
         });
         for (String entity : List.of("BookingEmail", "BookingCompletionDispute", "Booking", "NailService", "Employee",
                 "Payment", "WorkingSchedule", "User", "ServiceCategory", "SalonWorkingHour", "SalonProfileChange",
@@ -71,7 +72,7 @@ class PublicSearchPostgresTest {
         if (factory != null) factory.close();
         if (dataSource != null) dataSource.close();
     }
-    @BeforeEach void repository() { em = factory.createEntityManager(); repository = new SalonSearchRepositoryImpl(em); selects.set(0); }
+    @BeforeEach void repository() { em = factory.createEntityManager(); repository = new SalonSearchRepositoryImpl(em); selects.set(0); ranked = false; }
     @AfterEach void closeEntityManager() { if (em != null) em.close(); }
 
     @Test void ordinarySearchRetainsMissingPinsButNeverFabricatesThemOrDistances() {
@@ -159,15 +160,40 @@ class PublicSearchPostgresTest {
         assertEquals(List.of(2L),ids(search("Beta","",MONDAY.plusDays(1),LocalTime.NOON,null,null,null,"newest",0,20,CUTOFF)));
     }
 
+    @Test void subscriptionPriorityPrecedesAllSortsAndPaginationWithoutChangingTotals() {
+        ranked = true;
+        assertEquals(List.of(6L,2L,5L,3L,10L,9L,7L,4L,1L),ids(search("","",null,null,null,null,null,"newest",0,20,CUTOFF)));
+        assertEquals(List.of(2L,6L,3L,5L,1L,4L,10L,9L,7L),ids(search("","",null,null,null,null,null,"rating",0,20,CUTOFF)));
+        var first = search("","",null,null,0.0,0.0,null,"distance",0,2,CUTOFF);
+        assertEquals(List.of(2L,3L),ids(first)); assertEquals(6,first.getTotalElements());
+        assertEquals(List.of(4L,1L),ids(search("","",null,null,0.0,0.0,null,"distance",1,2,CUTOFF)));
+        assertTrue(first.getContent().get(0).getDistanceKm() > first.getContent().get(1).getDistanceKm());
+        assertEquals(com.bookingnailms.enums.SubscriptionTier.VIP,first.getContent().get(0).getSubscriptionTier());
+        assertEquals("Shop đối tác",first.getContent().get(0).getSubscriptionBadge());
+        assertEquals("Shop yêu thích",first.getContent().get(1).getSubscriptionBadge());
+    }
+
+    @Test void subscriptionCannotBypassFiltersAndExpiredOrFuturePeriodsAreNotProjected() {
+        ranked = true;
+        assertEquals(List.of(4L,1L),ids(search("","",null,null,0.0,0.0,0.000001,"distance",0,20,CUTOFF)));
+        assertEquals(List.of(5L,4L,1L),ids(search("gel","",null,null,null,null,null,"newest",0,20,CUTOFF)));
+        assertEquals(List.of(5L,10L,9L),ids(search("","",MONDAY,LocalTime.of(9,0),null,null,null,"newest",0,20,CUTOFF)));
+        var all = search("","",null,null,null,null,null,"newest",0,20,CUTOFF);
+        for (var salon : all) if (List.of(7L,10L).contains(salon.getId())) {
+            assertNull(salon.getSubscriptionTier()); assertNull(salon.getSubscriptionBadge());
+        }
+        assertEquals(9,all.getTotalElements());
+    }
+
     private Page<SalonSummaryResponse> search(String keyword, String location, LocalDate date, LocalTime time,
             Double latitude, Double longitude, Double radius, String sort, int page, int size, LocalDateTime cutoff) {
         return repository.searchPublic(new SalonSearchRequest(keyword,location,date,time,latitude,longitude,radius,sort),
-                cutoff,PageRequest.of(page,size));
+                cutoff,CUTOFF.minusHours(1),PageRequest.of(page,size));
     }
     private List<Long> ids(Page<SalonSummaryResponse> page) { return page.stream().map(SalonSummaryResponse::getId).toList(); }
 
     private static final String FIXTURES = java.text.Normalizer.normalize("""
-        with salons(id,name,address,city,district,logo_url,average_rating,total_reviews,latitude,longitude,status) as (values
+        with salon_fixture(id,name,address,city,district,logo_url,average_rating,total_reviews,latitude,longitude,status) as (values
           (1::bigint,'Alpha','1 Đường Hoa','HCM','Quận 1',null::text,4.0::numeric,20,0::float8,0::float8,'ACTIVE'),
           (2,'Beta','2 Road','HCM','Quận 1',null,5.0,3,0,0.02,'ACTIVE'),
           (3,'Gamma','3 Road','Hà Nội','Quận 2',null,5.0,9,0,0.01,'ACTIVE'),
@@ -178,6 +204,12 @@ class PublicSearchPostgresTest {
           (8,'Hidden','8 Road','HCM','Quận 1',null,5.0,100,0,0.001,'PENDING_APPROVAL'),
           (9,'Iota','9 Road','HCM','Quận 1',null,0.0,0,'NaN'::float8,0,'ACTIVE'),
           (10,'Kappa','10 Road','HCM','Quận 1',null,0.0,0,0,180,'ACTIVE')
+        ), salons as (
+          select f.*,
+            case when /*ranked*/false then case when id in (2,6,7,8,10) then 'VIP' when id in (3,5) then 'STANDARD' end end as subscription_tier,
+            case when /*ranked*/false then case when id=10 then '2026-10-18 10:01:01'::timestamp else '2026-10-01'::timestamp end end as subscription_starts_at,
+            case when /*ranked*/false then case when id=7 then '2026-10-18 10:01'::timestamp else '2026-11-01'::timestamp end end as subscription_expires_at
+          from salon_fixture f
         ), nail_services(id,salon_id,name,active) as (values
           (1::bigint,1::bigint,'Sơn gel',true),(2,1,'Gel repeated',true),(3,2,'Cuticle',true),
           (4,3,'Gel',false),(5,4,'Gel',true),(6,5,'Gel',true),(7,8,'Gel',true)

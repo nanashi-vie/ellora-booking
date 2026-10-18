@@ -1,6 +1,9 @@
 @if (error()) { <p role="alert" class="text-center text-red-700 py-6">{{ error() }}</p> }
 @if (salon(); as currentSalon) {
   <div class="salon-detail">
+    @if (currentSalon.subscriptionTier === 'VIP') {
+      <app-seasonal-scene scene="vip-detail" />
+    }
 
     <!-- ═══ Main Content ═══ -->
     <div class="content">
@@ -39,6 +42,7 @@
           </div>
 
           <div class="salon-info__meta">
+            @if (currentSalon.subscriptionTier) { <app-salon-subscription-badge [tier]="currentSalon.subscriptionTier" /> }
             <div class="salon-info__rating">
               <svg class="salon-info__star" viewBox="0 0 24 24"><path fill="currentColor" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
               <span class="salon-info__rating-value">{{ currentSalon.rating }}</span>
@@ -164,6 +168,7 @@
               @if (showStickySummary()) {
                 <div class="booking-widget__summary booking-widget__summary--visible">
                   <h2 class="booking-widget__title">{{ currentSalon.name }}</h2>
+                  @if (currentSalon.subscriptionTier) { <app-salon-subscription-badge [tier]="currentSalon.subscriptionTier" /> }
                   <div class="booking-widget__rating" [attr.aria-label]="currentSalon.rating + ' trên 5 sao, ' + currentSalon.reviewCount + ' đánh giá'">
                     <span class="booking-widget__rating-score">{{ currentSalon.rating }}</span>
                     <span class="booking-widget__stars" aria-hidden="true">
@@ -251,6 +256,7 @@
                   <h3>{{ nearbySalon.name }}</h3>
                   <span>{{ nearbySalon.rating }}</span>
                 </div>
+                @if (nearbySalon.subscriptionTier) { <app-salon-subscription-badge [tier]="nearbySalon.subscriptionTier" /> }
                 <p class="venue-card__address">{{ nearbySalon.city }}, {{ nearbySalon.address }}</p>
                 <p class="venue-card__meta">{{ nearbySalon.reviewCount }} đánh giá @if (nearbySalon.distance !== undefined) { · Cách tiệm này khoảng {{ nearbySalon.distance | number:'1.1-1' }} km }</p>
               </div>

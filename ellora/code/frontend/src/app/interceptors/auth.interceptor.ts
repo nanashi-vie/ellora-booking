@@ -11,7 +11,7 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
 
   const path = request.url.slice(apiConfig.baseUrl.length).split(/[?#]/)[0];
   // Public reads do not need Cognito or the backend's authenticated-user lookups.
-  if (request.method === 'GET' && (/^\/customer\/salons(?:\/|$)/.test(path) || path === '/ping')) {
+  if (request.method === 'GET' && (/^\/customer\/salons(?:\/|$)/.test(path) || path === '/ping' || path === '/salon-plans')) {
     return next(request);
   }
   if (request.method === 'POST' && path === '/bookings/guest') return next(request);

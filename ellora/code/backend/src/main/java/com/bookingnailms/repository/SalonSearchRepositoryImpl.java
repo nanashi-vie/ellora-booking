@@ -7,6 +7,7 @@ import com.bookingnailms.entity.Salon;
 import com.bookingnailms.entity.SalonClosure;
 import com.bookingnailms.entity.SalonWorkingHour;
 import com.bookingnailms.enums.SalonStatus;
+import com.bookingnailms.enums.SubscriptionTier;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.*;
 import lombok.RequiredArgsConstructor;
@@ -26,25 +27,37 @@ public class SalonSearchRepositoryImpl implements SalonSearchRepository {
     private final EntityManager entityManager;
 
     @Override
-    public Page<SalonSummaryResponse> searchPublic(SalonSearchRequest filters, LocalDateTime earliestBookable, Pageable pageable) {
+    public Page<SalonSummaryResponse> searchPublic(SalonSearchRequest filters, LocalDateTime earliestBookable, LocalDateTime asOf, Pageable pageable) {
         var cb = entityManager.getCriteriaBuilder();
         var query = cb.createQuery(SalonSummaryResponse.class);
         var salon = query.from(Salon.class);
         var validPin = validPin(cb, salon);
         var distance = distance(cb, salon, filters);
+        var effective = effectivePeriod(cb, salon, asOf);
+        var effectiveTier = cb.<SubscriptionTier>selectCase().when(effective, salon.<SubscriptionTier>get("subscriptionTier"))
+                .otherwise(cb.nullLiteral(SubscriptionTier.class));
+        var badge = cb.<String>selectCase()
+                .when(cb.and(effective,cb.equal(salon.get("subscriptionTier"),SubscriptionTier.VIP)),SubscriptionTier.VIP.badgeLabel())
+                .when(cb.and(effective,cb.equal(salon.get("subscriptionTier"),SubscriptionTier.STANDARD)),SubscriptionTier.STANDARD.badgeLabel())
+                .otherwise(cb.nullLiteral(String.class));
         query.select(cb.construct(SalonSummaryResponse.class,
                 salon.get("id"), salon.get("name"), salon.get("address"), salon.get("city"),
                 salon.get("logoUrl"), salon.get("averageRating"), salon.get("totalReviews"), salon.get("district"),
                 cb.<Double>selectCase().when(validPin, salon.<Double>get("latitude")).otherwise(cb.nullLiteral(Double.class)),
                 cb.<Double>selectCase().when(validPin, salon.<Double>get("longitude")).otherwise(cb.nullLiteral(Double.class)),
-                distance));
+                distance, effectiveTier, badge));
         query.where(filters(cb, query, salon, filters, earliestBookable, distance));
-        query.orderBy(switch (filters.sort()) {
+        var order = new ArrayList<Order>();
+        order.add(cb.desc(cb.<Integer>selectCase()
+                .when(cb.and(effective,cb.equal(salon.get("subscriptionTier"),SubscriptionTier.VIP)),2)
+                .when(cb.and(effective,cb.equal(salon.get("subscriptionTier"),SubscriptionTier.STANDARD)),1).otherwise(0)));
+        order.addAll(switch (filters.sort()) {
             case "distance" -> List.of(cb.asc(distance), cb.desc(salon.get("id")));
             case "rating" -> List.of(cb.desc(cb.coalesce(salon.get("averageRating"), 0)),
                     cb.desc(cb.coalesce(salon.get("totalReviews"), 0)), cb.desc(salon.get("id")));
             default -> List.of(cb.desc(salon.get("id")));
         });
+        query.orderBy(order);
         var content = entityManager.createQuery(query).setFirstResult(Math.toIntExact(pageable.getOffset()))
                 .setMaxResults(pageable.getPageSize()).getResultList();
 
@@ -119,6 +132,14 @@ public class SalonSearchRepositoryImpl implements SalonSearchRepository {
 
     private Predicate validPin(CriteriaBuilder cb, Root<Salon> salon) {
         return cb.and(cb.between(salon.get("latitude"), -90.0, 90.0), cb.between(salon.get("longitude"), -180.0, 180.0));
+    }
+
+    private Predicate effectivePeriod(CriteriaBuilder cb, Root<Salon> salon, LocalDateTime asOf) {
+        var starts = salon.<LocalDateTime>get("subscriptionStartsAt");
+        var expires = salon.<LocalDateTime>get("subscriptionExpiresAt");
+        return cb.and(cb.equal(salon.get("status"),SalonStatus.ACTIVE),
+                salon.get("subscriptionTier").in(SubscriptionTier.STANDARD,SubscriptionTier.VIP),
+                cb.lessThan(starts,expires),cb.lessThanOrEqualTo(starts,asOf),cb.greaterThan(expires,asOf));
     }
 
     private Expression<Double> distance(CriteriaBuilder cb, Root<Salon> salon, SalonSearchRequest filters) {

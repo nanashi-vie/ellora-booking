@@ -24,7 +24,11 @@ public interface SalonRepository extends JpaRepository<Salon, Long>, SalonSearch
 
     Optional<Salon> findByOwnerId(UUID ownerId);
 
+    @Query("select s.id from Salon s where s.owner.id = :ownerId")
+    Optional<Long> findIdByOwnerId(@Param("ownerId") UUID ownerId);
+
     boolean existsByOwnerId(UUID ownerId);
+    boolean existsByIdAndStatus(Long id, SalonStatus status);
 
     @Query("SELECT s FROM Salon s WHERE s.status = 'ACTIVE' AND " +
            "(LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +

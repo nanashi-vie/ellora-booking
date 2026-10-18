@@ -13,6 +13,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
       <a routerLink="/admin/salon-changes" routerLinkActive="is-active" ariaCurrentWhenActive="page">Duyệt cập nhật</a>
       <a routerLink="/admin/content" routerLinkActive="is-active" ariaCurrentWhenActive="page">Nội dung</a>
       <a routerLink="/admin/billing" routerLinkActive="is-active" ariaCurrentWhenActive="page">Phí nền tảng</a>
+      <a routerLink="/admin/subscriptions" routerLinkActive="is-active" ariaCurrentWhenActive="page">Gói đăng ký</a>
       <a routerLink="/admin/booking-disputes" routerLinkActive="is-active" ariaCurrentWhenActive="page">Phản ánh lịch hẹn</a>
     </nav>
   `,

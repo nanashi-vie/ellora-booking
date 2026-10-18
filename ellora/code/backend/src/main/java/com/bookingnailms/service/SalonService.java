@@ -122,7 +122,7 @@ public class SalonService {
         if (pageable.getOffset() > Integer.MAX_VALUE) throw new BadRequestException("Trang tìm kiếm quá lớn.");
         var filters = new SalonSearchRequest(keyword, location, request.date(), request.time(),
                 request.latitude(), request.longitude(), request.radiusKm(), sort);
-        return PageResponse.of(salonRepository.searchPublic(filters, earliestMinute, pageable));
+        return PageResponse.of(salonRepository.searchPublic(filters, earliestMinute, now, pageable));
     }
 
     private String searchText(String value) {
@@ -138,7 +138,21 @@ public class SalonService {
         return mapToSalonResponse(salon);
     }
 
+    @Transactional(readOnly = true)
+    public Long getMySalonId(UUID ownerId) {
+        return salonRepository.findIdByOwnerId(ownerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Salon not found for current owner"));
+    }
+
+    @Transactional(readOnly = true)
+    public void requireActiveSalon(Long id) {
+        if (!salonRepository.existsByIdAndStatus(id,SalonStatus.ACTIVE)) {
+            throw new ResourceNotFoundException("Salon not found");
+        }
+    }
+
     private SalonResponse mapToSalonResponse(Salon salon) {
+        var effectiveTier = salon.effectiveSubscriptionTier(LocalDateTime.ofInstant(clock.instant(), ZoneId.of("Asia/Ho_Chi_Minh")));
         return SalonResponse.builder()
                 .id(salon.getId())
                 .name(salon.getName())
@@ -160,6 +174,8 @@ public class SalonService {
                 .serviceCount(salon.getServices() != null ? salon.getServices().size() : 0)
                 .createdAt(salon.getCreatedAt())
                 .updatedAt(salon.getUpdatedAt())
+                .subscriptionTier(effectiveTier)
+                .subscriptionBadge(effectiveTier == null ? null : effectiveTier.badgeLabel())
                 .build();
     }
 

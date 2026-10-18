@@ -1,0 +1,47 @@
+:host { display: block; position: static; pointer-events: none; }
+.seasonal-art { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; z-index: 0; --frame: #edd4a6; }
+.seasonal-art[data-scene=vip-detail] { bottom: auto; height: min(760px, 100%); }
+.seasonal-art[data-season=summer] { --frame: #b8dfe1; }
+.seasonal-art[data-season=autumn] { --frame: #e7c4a2; }
+.seasonal-art[data-season=winter] { --frame: #c9dce7; }
+.seasonal-frame { position: absolute; inset: 12px 10px; border: 1px solid var(--frame); border-radius: 22px; opacity: .8; }
+.seasonal-frame::after { content: ''; position: absolute; inset: 4px; border: 1px solid var(--frame); border-radius: 18px; opacity: .35; }
+.seasonal-piece { position: absolute; display: block; width: var(--piece-size); height: var(--piece-size); transform: translateX(-50%); opacity: .68; }
+.piece-motion, .motif { display: block; width: 100%; height: 100%; }
+.piece-motion { transform: rotate(-18deg); }
+.flower { --petal: #e6bb63; position: relative; background: radial-gradient(ellipse at 50% 19%, var(--petal) 0 22%, transparent 24%), radial-gradient(ellipse at 82% 40%, var(--petal) 0 22%, transparent 24%), radial-gradient(ellipse at 71% 78%, var(--petal) 0 22%, transparent 24%), radial-gradient(ellipse at 28% 78%, var(--petal) 0 22%, transparent 24%), radial-gradient(ellipse at 18% 40%, var(--petal) 0 22%, transparent 24%); }
+.flower::after { content: ''; position: absolute; inset: 40%; border-radius: 50%; background: #a98242; }
+.flower--peach { --petal: #e8a4b8; }
+.flower--peach::after { background: #b46880; }
+.lifebuoy { border-radius: 50%; background: conic-gradient(#e8a4b8 0deg 45deg, #fffafa 45deg 90deg, #e8a4b8 90deg 135deg, #fffafa 135deg 180deg, #e8a4b8 180deg 225deg, #fffafa 225deg 270deg, #e8a4b8 270deg 315deg, #fffafa 315deg); border: 1px solid #bc8194; mask: radial-gradient(circle, transparent 0 30%, #000 33%); }
+.maple-leaf { position: relative; background: #ca8c57; clip-path: polygon(50% 0,58% 29%,74% 13%,70% 39%,96% 29%,81% 54%,100% 65%,62% 73%,55% 100%,45% 100%,42% 74%,8% 82%,23% 59%,0 48%,30% 43%,21% 18%,43% 33%); }
+.maple-leaf::after { content: ''; position: absolute; left: 49%; top: 20%; width: 1px; height: 80%; background: #90603f; transform: rotate(4deg); }
+.maple-leaf--gold { background: #d4a461; }
+.snow { position: relative; width: 7px; height: 7px; margin: 25%; border: 1px solid #aec8da; border-radius: 50%; background: #f2f8fb; }
+.snow--flake { width: 16px; height: 16px; margin: 0; border: 0; border-radius: 0; background: linear-gradient(90deg, transparent 44%, #bdd4e2 45% 55%, transparent 56%), linear-gradient(30deg, transparent 45%, #bdd4e2 46% 54%, transparent 55%), linear-gradient(-30deg, transparent 45%, #bdd4e2 46% 54%, transparent 55%); }
+.seasonal-waves { position: absolute; bottom: 12px; left: 10px; right: 10px; height: 36px; overflow: hidden; opacity: .65; }
+.wave { --water: #91c8ce; position: absolute; left: -64px; bottom: 0; width: calc(100% + 128px); height: 24px; background: radial-gradient(ellipse 32px 12px at 50% 100%, var(--water) 97%, transparent 100%) 0 0 / 64px 12px repeat-x, linear-gradient(var(--water), var(--water)) 0 11px / 100% 13px no-repeat; opacity: .7; }
+.wave--back { --water: #b5e0e2; bottom: 8px; opacity: .65; transform: translateX(32px); }
+.seasonal-controls { position: relative; z-index: 1; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px 12px; max-width: 1100px; margin: 0 auto; padding: 12px 24px; pointer-events: none; }
+.seasonal-toggle { pointer-events: auto; min-height: 36px; padding: 7px 12px; border: 1px solid #d9becb; border-radius: 8px; background: #fffafc; color: #71354e; font: inherit; font-size: 12px; font-weight: 600; line-height: 1.5; white-space: nowrap; cursor: pointer; }
+.seasonal-toggle:focus-visible { outline: 2px solid #8c3a5a; outline-offset: 3px; }
+.seasonal-toggle:hover { background: #fcebf2; }
+.motion-note { color: #78666f; font-size: 11px; }
+@media (prefers-reduced-motion: no-preference) {
+  .is-running .piece-motion { animation: seasonal-fall var(--duration) linear var(--delay) infinite; }
+  .is-running[data-season=summer] .piece-motion { animation-name: seasonal-float; }
+  .is-running .seasonal-frame { animation: seasonal-frame 10s ease-in-out infinite; }
+  .is-running .wave--front { animation: seasonal-wave 12s linear infinite; }
+  .is-running .wave--back { animation: seasonal-wave 18s linear reverse infinite; }
+}
+@keyframes seasonal-fall { 0% { opacity: 0; transform: translate3d(0,-40px,0) rotate(-20deg); } 16%, 76% { opacity: 1; } 100% { opacity: 0; transform: translate3d(var(--drift),130px,0) rotate(100deg); } }
+@keyframes seasonal-float { 0%, 100% { transform: translate3d(0,0,0) rotate(-16deg); } 50% { transform: translate3d(var(--drift),12px,0) rotate(17deg); } }
+@keyframes seasonal-wave { from { transform: translateX(0); } to { transform: translateX(64px); } }
+@keyframes seasonal-frame { 0%, 100% { opacity: .45; } 50% { opacity: .95; } }
+@media (max-width: 767px) {
+  .seasonal-piece:nth-of-type(n + 7) { display: none; }
+  .seasonal-piece { width: min(var(--piece-size), 18px); height: min(var(--piece-size), 18px); opacity: .6; }
+  .seasonal-controls { padding: 10px 16px; }
+  .seasonal-waves { opacity: .45; }
+}
+@media (prefers-reduced-motion: reduce) { .piece-motion, .seasonal-frame, .wave { animation: none !important; } }
