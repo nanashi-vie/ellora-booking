@@ -7,11 +7,12 @@
   <div
     class="header-shell max-w-[1200px] mx-auto h-16 rounded-[32px] flex items-center justify-between px-6 sm:px-8 pointer-events-auto relative z-50"
     [class.header-shell--home]="isHomePage"
+    [class.header-shell--admin]="isAdmin"
   >
     
     <!-- Left Section -->
-    <div class="hidden md:flex items-center gap-6 flex-1">
-      <a routerLink="/" class="flex items-center h-full">
+    <div class="items-center gap-6 flex-1" [ngClass]="isAdmin ? 'flex' : 'hidden md:flex'">
+      <a [routerLink]="logoLink" (click)="closeNavigation()" class="header-logo flex items-center h-full" [attr.aria-label]="isAdmin ? 'Về bảng điều khiển quản trị' : 'Trang chủ Ellora'" id="header-logo">
         <img src="ellora-logoHeader.png" alt="Ellora Logo" class="h-10 w-auto scale-[1.6] object-contain origin-left">
       </a>
     </div>
@@ -26,11 +27,13 @@
 
     <!-- Right Nav (Desktop) -->
     <nav class="hidden md:flex items-center gap-6 flex-1 justify-end">
-      @if (isHomePage) {
-        <a routerLink="/" class="text-[15px] font-semibold text-charcoal-900 hover:text-black transition-colors whitespace-nowrap">Trang chủ</a>
-        <a routerLink="/search" class="text-[15px] font-semibold text-charcoal-900 hover:text-black transition-colors whitespace-nowrap">Đặt lịch hẹn</a>
+      @if (isAdmin) {
+        <a routerLink="/admin/dashboard" (click)="closeNavigation()" class="header-admin-return" id="header-dashboard">Bảng điều khiển</a>
+      } @else if (isHomePage) {
+        <a routerLink="/" (click)="closeNavigation()" class="text-[15px] font-semibold text-charcoal-900 hover:text-black transition-colors whitespace-nowrap">Trang chủ</a>
+        <a routerLink="/search" (click)="closeNavigation()" class="text-[15px] font-semibold text-charcoal-900 hover:text-black transition-colors whitespace-nowrap">Đặt lịch hẹn</a>
       }
-      <a routerLink="/for-business" class="text-[15px] font-semibold text-charcoal-900 hover:text-black transition-colors whitespace-nowrap">Dành cho doanh nghiệp</a>
+      @if (!isAdmin) { <a routerLink="/for-business" (click)="closeNavigation()" class="text-[15px] font-semibold text-charcoal-900 hover:text-black transition-colors whitespace-nowrap">Dành cho doanh nghiệp</a> }
 
       @if (isAuthChecking) {
         <div class="w-10 h-10 bg-black/5 animate-pulse rounded-full"></div>
@@ -44,6 +47,9 @@
               : 'border border-white/55 hover:border-white/80 bg-white/48 backdrop-blur-sm'"
             (click)="toggleDropdown()"
             id="header-avatar-btn"
+            aria-label="Mở menu tài khoản"
+            [attr.aria-expanded]="isDropdownOpen"
+            aria-controls="header-dropdown-menu"
           >
             <span class="header-avatar-circle header-avatar-circle--small">{{ userInitial }}</span>
             <svg
@@ -62,6 +68,10 @@
               <div class="header-dropdown__divider"></div>
 
               <!-- Menu Items -->
+              @if (isAdmin) {
+                <a routerLink="/admin/dashboard" (click)="closeNavigation()" class="header-dropdown__item" id="dropdown-dashboard">Bảng điều khiển</a>
+              }
+              @if (isCustomer) {
               <button type="button" class="header-dropdown__item" (click)="navigateTo('/setting/profile')" id="dropdown-profile">
                 <svg class="header-dropdown__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="3" y="3" width="18" height="18" rx="3"/>
@@ -70,7 +80,6 @@
                 </svg>
                 Trang cá nhân
               </button>
-
               <button type="button" class="header-dropdown__item" (click)="navigateTo('/setting/security')" id="dropdown-security">
                 <svg class="header-dropdown__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
@@ -94,6 +103,7 @@
                 </svg>
                 Điểm thưởng
               </button>
+              }
 
               <div class="header-dropdown__divider"></div>
 
@@ -105,7 +115,7 @@
           }
         </div>
       } @else {
-        <a routerLink="/login" class="bg-[#F9A8B6] hover:bg-[#F493A4] text-white text-[15px] font-bold px-6 py-2 rounded-full transition-colors shadow-sm whitespace-nowrap">Đăng nhập</a>
+        <a routerLink="/login" (click)="closeNavigation()" class="bg-[#F9A8B6] hover:bg-[#F493A4] text-white text-[15px] font-bold px-6 py-2 rounded-full transition-colors shadow-sm whitespace-nowrap">Đăng nhập</a>
       }
     </nav>
 
@@ -116,6 +126,9 @@
         class="p-2 -mr-2 text-charcoal-900 hover:bg-black/5 rounded-full transition-colors"
         (click)="toggleMobileMenu()"
         id="mobile-menu-btn"
+        aria-label="Mở menu điều hướng"
+        [attr.aria-expanded]="isMobileMenuOpen"
+        aria-controls="mobile-menu-panel"
       >
         @if (!isMobileMenuOpen) {
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -146,9 +159,13 @@
   @if (isMobileMenuOpen) {
     <div class="mobile-menu-panel md:hidden" id="mobile-menu-panel">
       <nav class="mobile-menu-nav">
-        <a class="mobile-menu-link" (click)="navigateTo('/')">Trang chủ</a>
-        <a class="mobile-menu-link" (click)="navigateTo('/search')">Đặt lịch hẹn</a>
-        <a class="mobile-menu-link" (click)="navigateTo('/for-business')">Dành cho doanh nghiệp</a>
+        @if (isAdmin) {
+          <a class="mobile-menu-link" routerLink="/admin/dashboard" (click)="closeNavigation()" id="mobile-dashboard">Bảng điều khiển</a>
+        } @else {
+          <a class="mobile-menu-link" routerLink="/" (click)="closeNavigation()">Trang chủ</a>
+          <a class="mobile-menu-link" routerLink="/search" (click)="closeNavigation()">Đặt lịch hẹn</a>
+          <a class="mobile-menu-link" routerLink="/for-business" (click)="closeNavigation()">Dành cho doanh nghiệp</a>
+        }
 
         @if (isAuthChecking) {
           <div class="mobile-menu-divider"></div>
@@ -162,35 +179,37 @@
             <span class="header-avatar-circle header-avatar-circle--small">{{ userInitial }}</span>
             <span class="mobile-menu-username">{{ userName }}</span>
           </div>
-          <a class="mobile-menu-link" (click)="navigateTo('/profile')">
+          @if (isCustomer) {
+          <a class="mobile-menu-link" routerLink="/setting/profile" (click)="closeNavigation()" id="mobile-profile">
             <svg class="mobile-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="10" r="3"/><path d="M7 21v-1a5 5 0 0 1 10 0v1"/>
             </svg>
             Trang cá nhân
           </a>
-          <a class="mobile-menu-link" (click)="navigateTo('/account')">
+          <a class="mobile-menu-link" routerLink="/setting/security" (click)="closeNavigation()" id="mobile-security">
             <svg class="mobile-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
             </svg>
             Bảo mật
           </a>
-          <a class="mobile-menu-link" (click)="navigateTo('/my-bookings')">
+          <a class="mobile-menu-link" routerLink="/setting/my-bookings" (click)="closeNavigation()" id="mobile-bookings">
             <svg class="mobile-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
             </svg>
             Lịch sử đặt lịch
           </a>
-          <a class="mobile-menu-link" (click)="showComingSoonToast()">
+          <button type="button" class="mobile-menu-link" (click)="showComingSoonToast()" id="mobile-rewards">
             <svg class="mobile-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
             </svg>
             Điểm thưởng
-          </a>
+          </button>
+          }
           <div class="mobile-menu-divider"></div>
-          <a class="mobile-menu-link mobile-menu-logout" (click)="logout()">Đăng xuất</a>
+          <button type="button" class="mobile-menu-link mobile-menu-logout" (click)="logout()" id="mobile-logout">Đăng xuất</button>
         } @else {
           <div class="mobile-menu-divider"></div>
-          <a class="mobile-menu-login" (click)="navigateTo('/login')">Đăng nhập</a>
+          <a class="mobile-menu-login" routerLink="/login" (click)="closeNavigation()">Đăng nhập</a>
         }
       </nav>
     </div>

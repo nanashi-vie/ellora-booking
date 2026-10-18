@@ -2,6 +2,7 @@ import { Component, ElementRef, HostBinding, HostListener, inject, OnInit, OnDes
 import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
+import { Profile, ProfileApiService } from '../../../services/profile-api.service';
 import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { filter } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -17,6 +18,7 @@ import { PublicSalonSearchService } from '../../../services/public-salon-search.
 })
 export class Header implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
+  private readonly profileApi = inject(ProfileApiService);
   private readonly router = inject(Router);
   private readonly elementRef = inject(ElementRef);
   private readonly platformId = inject(PLATFORM_ID);
@@ -24,6 +26,7 @@ export class Header implements OnInit, OnDestroy {
   private readonly zone = inject(NgZone);
   readonly search = inject(PublicSalonSearchService);
   private destroyed = false;
+  private authRequest = 0;
 
   private readonly handleScroll = () => {
     const atTop = window.scrollY <= 20;
@@ -33,6 +36,7 @@ export class Header implements OnInit, OnDestroy {
 
   isAuthChecking = true;
   isLoggedIn = false;
+  userRole: Profile['role'] | null = null;
   userName = '';
   userInitial = '';
   isDropdownOpen = false;
@@ -47,7 +51,7 @@ export class Header implements OnInit, OnDestroy {
 
   constructor() {
     this.router.events.pipe(filter(event => event instanceof NavigationEnd), takeUntilDestroyed()).subscribe(() => {
-      this.isSearchActive = false; this.isMobileMenuOpen = false; this.isDropdownOpen = false;
+      this.closeNavigation();
     });
   }
 
@@ -67,6 +71,7 @@ export class Header implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.destroyed = true;
+    this.authRequest++;
     if (isPlatformBrowser(this.platformId)) window.removeEventListener('scroll', this.handleScroll);
     clearTimeout(this.comingSoonTimer);
   }
@@ -78,6 +83,10 @@ export class Header implements OnInit, OnDestroy {
   get isBookingPage(): boolean {
     return this.router.url.startsWith('/booking');
   }
+
+  get isAdmin(): boolean { return this.isLoggedIn && this.userRole === 'ADMIN'; }
+  get isCustomer(): boolean { return this.isLoggedIn && this.userRole === 'CUSTOMER'; }
+  get logoLink(): string { return this.isAdmin ? '/admin/dashboard' : '/'; }
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
@@ -94,6 +103,7 @@ export class Header implements OnInit, OnDestroy {
 
   toggleDropdown(): void {
     this.isDropdownOpen = !this.isDropdownOpen;
+    if (this.isDropdownOpen) { this.isSearchActive = false; this.isMobileMenuOpen = false; }
   }
 
   toggleSearch(active?: boolean): void {
@@ -104,8 +114,15 @@ export class Header implements OnInit, OnDestroy {
 
   @HostListener('document:keydown.escape', ['$event'])
   closeSearchOnEscape(event: Event): void {
-    if (!this.isSearchActive) return;
-    event.preventDefault(); this.toggleSearch(false);
+    if (this.isSearchActive) {
+      event.preventDefault(); this.toggleSearch(false);
+      this.elementRef.nativeElement.querySelector('.header-search-trigger')?.focus();
+    } else if (this.isDropdownOpen || this.isMobileMenuOpen) {
+      event.preventDefault();
+      const selector = this.isDropdownOpen ? '#header-avatar-btn' : '#mobile-menu-btn';
+      this.closeNavigation();
+      this.elementRef.nativeElement.querySelector(selector)?.focus();
+    }
   }
 
   toggleMobileMenu(): void {
@@ -113,10 +130,15 @@ export class Header implements OnInit, OnDestroy {
     this.isMobileMenuOpen = !this.isMobileMenuOpen;
   }
 
-  navigateTo(route: string): void {
+  closeNavigation(): void {
     this.isDropdownOpen = false;
     this.isMobileMenuOpen = false;
     this.isSearchActive = false;
+    this.cdr.markForCheck();
+  }
+
+  navigateTo(route: string): void {
+    this.closeNavigation();
     this.router.navigateByUrl(route);
   }
 
@@ -131,31 +153,44 @@ export class Header implements OnInit, OnDestroy {
   }
 
   async logout(): Promise<void> {
+    this.authRequest++;
     this.isDropdownOpen = false;
     this.isMobileMenuOpen = false;
-    await this.authService.logout();
+    this.isSearchActive = false;
     this.isLoggedIn = false;
+    this.isAuthChecking = false;
+    this.userRole = null;
     this.userName = '';
     this.userInitial = '';
-    await this.router.navigateByUrl('/login');
+    await this.authService.logout();
+    if (!this.destroyed) await this.router.navigateByUrl('/login');
   }
 
   private async checkAuthState(): Promise<void> {
+    const request = ++this.authRequest;
+    const current = () => !this.destroyed && request === this.authRequest;
     try {
-      this.isLoggedIn = await this.authService.isAuthenticated();
-      if (this.isLoggedIn) {
+      const authenticated = await this.authService.isAuthenticated();
+      if (!current()) return;
+      this.isLoggedIn = authenticated;
+      if (authenticated) {
         try {
-          const profile = await this.authService.getUserProfile();
-          this.userName = profile.name || profile.email;
+          const profile = await this.profileApi.getCurrentUser();
+          if (!current()) return;
+          this.userRole = ['ADMIN', 'CUSTOMER', 'SALON_OWNER'].includes(profile.role) ? profile.role : null;
+          this.userName = profile.fullName?.trim() || profile.email?.trim() || 'Tài khoản';
           this.userInitial = this.userName.charAt(0).toUpperCase();
         } catch {
-          this.userName = 'User';
-          this.userInitial = 'U';
+          if (!current()) return;
+          this.userRole = null;
+          this.userName = 'Tài khoản';
+          this.userInitial = 'T';
         }
       }
+    } catch {
+      if (current()) { this.isLoggedIn = false; this.userRole = null; }
     } finally {
-      this.isAuthChecking = false;
-      if (!this.destroyed) this.cdr.detectChanges();
+      if (current()) { this.isAuthChecking = false; this.cdr.markForCheck(); }
     }
   }
 }
