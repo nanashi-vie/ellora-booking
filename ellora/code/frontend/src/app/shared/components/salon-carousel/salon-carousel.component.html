@@ -2,7 +2,7 @@
   @if (animateHeader) {
     <div class="flex items-center justify-between mb-8" appRevealOnScroll="fade-up" [revealDistance]="24">
       <h2 class="font-bold text-2xl text-brand-darker tracking-tight">{{ title }}</h2>
-      <a [routerLink]="viewAllLink" [queryParams]="viewAllQueryParams" class="text-sm font-semibold text-brand hover:text-brand-darker transition-colors" appRevealOnScroll="fade" [revealDelay]="120">Xem tất cả</a>
+      <a [routerLink]="viewAllLink" [queryParams]="viewAllQueryParams" class="text-sm font-semibold text-brand hover:text-brand-darker transition-colors" appRevealOnScroll="fade" [revealDelay]="60">Xem tất cả</a>
     </div>
   } @else {
     <div class="flex items-center justify-between mb-8">
@@ -18,7 +18,7 @@
       
       @for (salon of salons; track salon.id; let index = $index) {
         @if (animateCards) {
-          <div class="w-[85vw] sm:w-[calc(50%-12px)] lg:w-[calc(25%-18px)] shrink-0 snap-start" appRevealOnScroll="fade-up" [revealDelay]="index * 140" [revealDistance]="24">
+          <div class="w-[85vw] sm:w-[calc(50%-12px)] lg:w-[calc(25%-18px)] shrink-0 snap-start" appRevealOnScroll="fade-up" [revealDelay]="index > 3 ? 180 : index * 60" [revealDistance]="18">
             <app-salon-card [salon]="salon" variant="home" class="block h-full"></app-salon-card>
           </div>
         } @else {

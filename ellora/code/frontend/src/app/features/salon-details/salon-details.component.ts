@@ -6,11 +6,13 @@ import { ServiceCard } from '../../shared/components/service-card/service-card.c
 import { Review, Salon, Service } from '../../models/ellora.model';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { PublicSalonMapComponent } from './public-salon-map.component';
+import { SalonSubscriptionBadgeComponent } from '../../shared/components/salon-subscription-badge.component';
+import { SeasonalSceneComponent } from '../../shared/components/seasonal-scene/seasonal-scene.component';
 
 @Component({
   selector: 'app-salon-details',
   standalone: true,
-  imports: [CommonModule, RouterModule, ServiceCard, PublicSalonMapComponent],
+  imports: [CommonModule, RouterModule, ServiceCard, PublicSalonMapComponent, SalonSubscriptionBadgeComponent, SeasonalSceneComponent],
   templateUrl: './salon-details.component.html',
   styleUrl: './salon-details.component.scss'
 })

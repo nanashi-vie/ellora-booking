@@ -28,6 +28,7 @@
       <button type="button" class="map-toggle" [attr.aria-expanded]="mobileMap()" (click)="mobileMap.set(!mobileMap())">{{ mobileMap() ? 'Ẩn bản đồ' : 'Xem bản đồ' }}</button>
     </div>
   </div>
+  <p class="search-note">Ưu tiên gói VIP → gói Thường → tiệm chưa có gói. Cách sắp xếp đã chọn áp dụng trong từng nhóm.</p>
   <div class="search-layout">
     <div class="search-results" [attr.aria-busy]="loading()">
       @if (error()) {

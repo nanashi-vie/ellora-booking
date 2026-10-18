@@ -1,0 +1,39 @@
+.vip-seasonal-card {
+  position: relative;
+  padding: 10px;
+  --season-edge: #c68b48;
+  --season-light: #edc27b;
+  background: #fffafc;
+  border: 2px solid var(--season-edge);
+  border-radius: 20px;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--season-edge) 14%, transparent);
+}
+.vip-seasonal-card[data-season='spring'] { --season-edge: #dca0b1; --season-light: #f1d28a; }
+.vip-seasonal-card[data-season='summer'] { --season-edge: #69b9c4; --season-light: #f2b7cc; }
+.vip-seasonal-card[data-season='winter'] { --season-edge: #86aec9; --season-light: #d4e8f4; }
+.vip-seasonal-card::after { content: ''; position: absolute; inset: 3px; border: 1px solid var(--season-light); border-radius: 15px; pointer-events: none; }
+.vip-seasonal-sprig { position: absolute; top: 2px; right: 3px; width: 72px; height: 66px; z-index: 1; pointer-events: none; transform-origin: 90% 8%; transform: rotate(-3deg); }
+.sprig-stem { position: absolute; width: 53px; height: 36px; top: 5px; right: 5px; border-top: 2px solid #a87545; border-radius: 60% 0 0 0; transform: rotate(-42deg); transform-origin: right top; }
+.sprig-leaf { position: absolute; width: 27px; height: 29px; background: #c77b3d; clip-path: polygon(50% 0,59% 27%,78% 12%,73% 38%,100% 30%,83% 55%,96% 68%,60% 76%,54% 100%,46% 100%,41% 76%,6% 69%,20% 53%,0 31%,28% 39%,21% 13%,42% 29%); transform-origin: 50% 90%; }
+.sprig-leaf::after { content: ''; position: absolute; left: 49%; top: 26%; width: 1px; height: 70%; background: #915e35; opacity: .5; }
+.sprig-leaf--0 { top: 0; right: 4px; transform: rotate(38deg); }
+.sprig-leaf--1 { top: 7px; right: 25px; transform: rotate(-33deg); background: #e6b65f; }
+.sprig-leaf--2 { top: 23px; right: 10px; transform: rotate(65deg); background: #d5974b; }
+.sprig-leaf--3 { top: 27px; right: 37px; transform: rotate(-48deg); width: 23px; height: 25px; background: #ce914c; }
+.sprig-leaf--4 { top: 42px; right: 25px; transform: rotate(8deg); width: 19px; height: 21px; background: #e6b65f; }
+[data-season='spring'] .sprig-leaf { --petal: #eda5bd; clip-path: none; background: radial-gradient(ellipse at 50% 19%, var(--petal) 0 22%, transparent 24%), radial-gradient(ellipse at 82% 40%, var(--petal) 0 22%, transparent 24%), radial-gradient(ellipse at 71% 78%, var(--petal) 0 22%, transparent 24%), radial-gradient(ellipse at 28% 78%, var(--petal) 0 22%, transparent 24%), radial-gradient(ellipse at 18% 40%, var(--petal) 0 22%, transparent 24%); }
+[data-season='spring'] .sprig-leaf:nth-child(odd) { --petal: #f1ca55; }
+[data-season='spring'] .sprig-leaf::after { inset: 42%; width: auto; height: auto; border-radius: 50%; background: #b17a32; opacity: 1; }
+.summer-ring { position: absolute; right: 8px; top: 7px; width: 48px; height: 48px; border-radius: 50%; background: conic-gradient(#ed9eb9 0deg 45deg, #fff8fb 45deg 90deg, #ed9eb9 90deg 135deg, #fff8fb 135deg 180deg, #ed9eb9 180deg 225deg, #fff8fb 225deg 270deg, #ed9eb9 270deg 315deg, #fff8fb 315deg); border: 1px solid #cf819f; mask: radial-gradient(circle, transparent 0 29%, #000 32%); transform: rotate(12deg); }
+.snowman { position: absolute; right: 12px; top: 3px; width: 40px; height: 59px; }
+.snowman-body { position: absolute; width: 36px; height: 34px; left: 2px; bottom: 0; border: 1px solid #a7cada; border-radius: 50%; background: radial-gradient(circle at 50% 45%, #55768b 0 1.5px, transparent 2px), radial-gradient(circle at 50% 67%, #55768b 0 1.5px, transparent 2px), #f7fcff; box-shadow: inset -4px -2px 0 #e0eff6; }
+.snowman-head { position: absolute; top: 9px; left: 7px; width: 26px; height: 25px; border: 1px solid #a7cada; border-radius: 50%; background: radial-gradient(circle at 34% 42%, #344e60 0 1px, transparent 1.5px), radial-gradient(circle at 66% 42%, #344e60 0 1px, transparent 1.5px), #fff; }
+.snowman-head::after { content: ''; position: absolute; left: 12px; top: 13px; width: 11px; height: 5px; background: #e79645; clip-path: polygon(0 0, 100% 50%, 0 100%); }
+.snowman-hat { position: absolute; top: 0; left: 8px; width: 23px; height: 13px; border-radius: 3px 3px 0 0; background: #506c83; border-bottom: 3px solid #eaa7bc; }
+.snowman-hat::after { content: ''; position: absolute; left: -4px; bottom: -5px; width: 31px; height: 3px; border-radius: 2px; background: #506c83; }
+.snowman-scarf { position: absolute; top: 31px; left: 6px; width: 28px; height: 6px; border-radius: 4px; background: #dc91ad; }
+.snowman-scarf::after { content: ''; position: absolute; right: 3px; top: 3px; width: 7px; height: 13px; border-radius: 0 0 2px 2px; background: #dc91ad; transform: rotate(-12deg); }
+@media (prefers-reduced-motion: no-preference) {
+  .vip-seasonal-card:not(.is-paused) .vip-seasonal-sprig { animation: vip-sprig-sway 4.5s ease-in-out infinite; }
+}
+@keyframes vip-sprig-sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(4deg); } }

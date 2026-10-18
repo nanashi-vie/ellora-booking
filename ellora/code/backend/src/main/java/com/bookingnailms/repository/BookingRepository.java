@@ -94,8 +94,10 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"customer", "salon", "service", "employee", "review"})
     Page<Booking> findByCustomerIdOrderByCreatedAtDesc(UUID customerId, Pageable pageable);
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"customer", "salon", "service", "employee", "review"})
     Page<Booking> findBySalonIdOrderByScheduledAtDesc(Long salonId, Pageable pageable);
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"customer", "salon", "service", "employee", "review"})
     Page<Booking> findBySalonIdAndStatusOrderByScheduledAtDesc(Long salonId, BookingStatus status, Pageable pageable);
 
     List<Booking> findByEmployeeIdAndScheduledAtBetween(Long employeeId, LocalDateTime start, LocalDateTime end);

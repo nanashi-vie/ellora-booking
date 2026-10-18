@@ -15,6 +15,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     @org.springframework.data.jpa.repository.Query("select r from Review r where r.id = :id")
     java.util.Optional<Review> findForUpdateById(@org.springframework.data.repository.query.Param("id") Long id);
     Page<Review> findBySalonIdOrderByCreatedAtDesc(Long salonId, Pageable pageable);
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"customer", "booking", "booking.employee"})
+    Page<Review> findWithDetailsBySalonIdOrderByCreatedAtDesc(Long salonId, Pageable pageable);
     Page<Review> findByCustomerIdOrderByCreatedAtDesc(UUID customerId, Pageable pageable);
     boolean existsByBookingId(Long bookingId);
     @Query("select coalesce(avg(r.rating), 0) from Review r where r.salon.id = :salon")

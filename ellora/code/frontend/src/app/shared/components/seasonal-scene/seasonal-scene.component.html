@@ -1,0 +1,22 @@
+<div class="seasonal-art" aria-hidden="true" [attr.data-season]="seasons.season()" [attr.data-scene]="scene()" [class.is-running]="running()">
+  <div class="seasonal-frame"></div>
+  @for (piece of pieces; track $index) {
+    <span class="seasonal-piece" [style.left.%]="piece.x" [style.top.%]="piece.y" [style.--piece-size.px]="piece.size" [style.--delay.s]="piece.delay" [style.--duration.s]="piece.duration" [style.--drift.px]="piece.drift">
+      <span class="piece-motion">
+        @switch (seasons.season()) {
+          @case ('spring') { <span class="motif flower" [class.flower--peach]="$index % 2 !== 0"></span> }
+          @case ('summer') { <span class="motif lifebuoy"></span> }
+          @case ('autumn') { <span class="motif maple-leaf" [class.maple-leaf--gold]="$index % 2 !== 0"></span> }
+          @case ('winter') { <span class="motif snow" [class.snow--flake]="$index % 3 !== 2"></span> }
+        }
+      </span>
+    </span>
+  }
+  @if (seasons.season() === 'summer') {
+    <div class="seasonal-waves"><span class="wave wave--back"></span><span class="wave wave--front"></span></div>
+  }
+</div>
+<div class="seasonal-controls">
+  @if (ready() && reducedMotion()) { <span class="motion-note">Đang giảm chuyển động theo thiết bị.</span> }
+  <button type="button" class="seasonal-toggle" (click)="seasons.toggle()" [attr.aria-pressed]="seasons.paused()" [attr.aria-label]="(seasons.paused() ? 'Bật' : 'Tạm dừng') + ' chuyển động mùa ' + labels[seasons.season()]">{{ seasons.paused() ? 'Bật chuyển động mùa' : 'Tạm dừng chuyển động' }}</button>
+</div>

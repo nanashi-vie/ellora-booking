@@ -8,5 +8,5 @@ import org.springframework.data.domain.Pageable;
 import java.time.LocalDateTime;
 
 public interface SalonSearchRepository {
-    Page<SalonSummaryResponse> searchPublic(SalonSearchRequest filters, LocalDateTime earliestBookable, Pageable pageable);
+    Page<SalonSummaryResponse> searchPublic(SalonSearchRequest filters, LocalDateTime earliestBookable, LocalDateTime asOf, Pageable pageable);
 }

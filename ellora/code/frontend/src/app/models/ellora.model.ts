@@ -27,6 +27,8 @@ export interface Salon {
   distance?: number; // Calculated based on user location
   isOpen?: boolean;
   nextAvailable?: string; // ISO date string
+  subscriptionTier?: 'STANDARD' | 'VIP' | null;
+  subscriptionBadge?: string | null;
 }
 
 export interface Service {

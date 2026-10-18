@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { apiConfig } from '../config/api.config';
 import { Salon, Service, Staff, Review } from '../models/ellora.model';
-interface SalonResponse {id:number;name:string;description?:string;address:string;city:string;district?:string|null;logoUrl?:string;imageUrls?:string[];averageRating:number;totalReviews:number;latitude?:number|null;longitude?:number|null;distanceKm?:number|null;}
+interface SalonResponse {id:number;name:string;description?:string;address:string;city:string;district?:string|null;logoUrl?:string;imageUrls?:string[];averageRating:number;totalReviews:number;latitude?:number|null;longitude?:number|null;distanceKm?:number|null;subscriptionTier?:string|null;subscriptionBadge?:string|null;}
 export interface SalonSearchOptions { keyword?:string;location?:string;date?:string;time?:string;latitude?:number;longitude?:number;radiusKm?:number;sort?:'newest'|'rating'|'distance'; }
 export interface SalonPage<T> {content:T[];pageNumber:number;last:boolean;totalElements:number;}
 export interface SalonWorkingHour { dayOfWeek: string; openTime: string | null; closeTime: string | null; closed: boolean; }
@@ -17,7 +17,9 @@ export class SalonApiService {
   const coordinates=typeof latitude==='number'&&typeof longitude==='number'&&Number.isFinite(latitude)&&Number.isFinite(longitude)
    &&latitude>=-90&&latitude<=90&&longitude>=-180&&longitude<=180?{lat:latitude,lng:longitude}:null;
   const distance=coordinates&&typeof s.distanceKm==='number'&&Number.isFinite(s.distanceKm)&&s.distanceKm>=0?s.distanceKm:undefined;
-  return {id:String(s.id),name:s.name,description:s.description||'',address:s.address,city:s.city,district:s.district,rating:s.averageRating||0,reviewCount:s.totalReviews||0,images:images.length?images:['/salon-placeholder.svg'],coordinates,distance};
+  const subscriptionTier=s.subscriptionTier==='VIP'||s.subscriptionTier==='STANDARD'?s.subscriptionTier:null;
+  const subscriptionBadge=subscriptionTier==='VIP'?'Shop đối tác':subscriptionTier==='STANDARD'?'Shop yêu thích':null;
+  return {id:String(s.id),name:s.name,description:s.description||'',address:s.address,city:s.city,district:s.district,rating:s.averageRating||0,reviewCount:s.totalReviews||0,images:images.length?images:['/salon-placeholder.svg'],coordinates,distance,subscriptionTier,subscriptionBadge};
  }
  async search(keyword='',page=0,size=12){const result=await this.get<SalonPage<SalonResponse>>('?keyword='+encodeURIComponent(keyword)+'&page='+page+'&size='+size);return {...result,content:result.content.map(s=>this.map(s))};}
  async searchFiltered(options:SalonSearchOptions={},page=0,size=12){

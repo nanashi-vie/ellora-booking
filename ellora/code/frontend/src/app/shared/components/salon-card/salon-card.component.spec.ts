@@ -59,7 +59,7 @@ describe('SalonCard', () => {
 
     expect(compiled.textContent).toContain(salon.name);
     expect(compiled.textContent).not.toContain('Nail Salon');
-    expect(compiled.textContent).toContain('Đặt ngay');
+    expect(compiled.textContent).toContain('Xem tiệm');
     expect(compiled.querySelector('.absolute')).toBeTruthy();
   });
 
@@ -78,6 +78,11 @@ describe('SalonCard', () => {
     expect(link?.getAttribute('href')).toBe('/salon/salon-1');
     expect(image?.getAttribute('alt')).toBe(salon.name);
     expect(image?.getAttribute('loading')).toBe('lazy');
+    expect(image?.getAttribute('decoding')).toBe('async');
+    expect(image?.getAttribute('width')).toBe('600');
+    expect(image?.getAttribute('height')).toBe('400');
+    expect(image?.style.opacity).toBe('');
+    expect(image?.style.willChange).toBe('');
     expect(cover?.className).toContain('aspect-[3/2]');
     expect(title?.className).toContain('truncate');
     expect(rating?.className).toContain('whitespace-nowrap');

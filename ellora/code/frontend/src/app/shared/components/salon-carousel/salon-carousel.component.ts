@@ -1,5 +1,5 @@
-import { Component, ElementRef, Input, ViewChild, signal, AfterViewInit, OnDestroy, NgZone, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, ElementRef, Input, ViewChild, signal, AfterViewInit, OnDestroy, NgZone, inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Params, RouterModule } from '@angular/router';
 import { Salon } from '../../../models/ellora.model';
 import { SalonCard } from '../salon-card/salon-card.component';
@@ -22,7 +22,9 @@ export class SalonCarouselComponent implements AfterViewInit, OnDestroy {
 
   @ViewChild('scrollContainer') scrollContainer!: ElementRef<HTMLElement>;
   private readonly zone = inject(NgZone);
+  private readonly platformId = inject(PLATFORM_ID);
   private scrollFrame = 0;
+  private initialCheck?: ReturnType<typeof setTimeout>;
   private carouselElement?: HTMLElement;
   private readonly handleScroll = () => {
     if (this.scrollFrame) return;
@@ -36,14 +38,16 @@ export class SalonCarouselComponent implements AfterViewInit, OnDestroy {
   canScrollRight = signal(true);
 
   ngAfterViewInit() {
+    if (!isPlatformBrowser(this.platformId)) return;
     this.carouselElement = this.scrollContainer.nativeElement;
     this.zone.runOutsideAngular(() => this.carouselElement?.addEventListener('scroll', this.handleScroll, { passive: true }));
-    setTimeout(() => this.checkScroll(), 100);
+    this.initialCheck = setTimeout(() => this.checkScroll(), 100);
   }
 
   ngOnDestroy(): void {
     this.carouselElement?.removeEventListener('scroll', this.handleScroll);
     if (this.scrollFrame) cancelAnimationFrame(this.scrollFrame);
+    clearTimeout(this.initialCheck);
   }
 
   checkScroll() {
@@ -60,18 +64,22 @@ export class SalonCarouselComponent implements AfterViewInit, OnDestroy {
   }
 
   scrollLeft() {
-    if (this.scrollContainer) {
+    if (isPlatformBrowser(this.platformId) && this.scrollContainer) {
       const el = this.scrollContainer.nativeElement;
       const cardWidth = el.clientWidth > 768 ? el.clientWidth / 3 : el.clientWidth;
-      el.scrollBy({ left: -cardWidth, behavior: 'smooth' });
+      el.scrollBy({ left: -cardWidth, behavior: this.scrollBehavior() });
     }
   }
 
   scrollRight() {
-    if (this.scrollContainer) {
+    if (isPlatformBrowser(this.platformId) && this.scrollContainer) {
       const el = this.scrollContainer.nativeElement;
       const cardWidth = el.clientWidth > 768 ? el.clientWidth / 3 : el.clientWidth;
-      el.scrollBy({ left: cardWidth, behavior: 'smooth' });
+      el.scrollBy({ left: cardWidth, behavior: this.scrollBehavior() });
     }
+  }
+
+  private scrollBehavior(): ScrollBehavior {
+    return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth';
   }
 }

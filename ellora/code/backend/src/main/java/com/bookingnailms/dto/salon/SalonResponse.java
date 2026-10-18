@@ -36,4 +36,6 @@ public class SalonResponse {
     private Integer serviceCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private com.bookingnailms.enums.SubscriptionTier subscriptionTier;
+    private String subscriptionBadge;
 }

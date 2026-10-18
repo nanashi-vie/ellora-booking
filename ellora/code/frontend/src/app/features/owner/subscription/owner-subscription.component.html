@@ -1,0 +1,89 @@
+<main class="owner-page">
+  <header><div><h1>Gói đăng ký</h1><p class="muted">Chuyển khoản theo hướng dẫn, báo đã chuyển và chờ admin xác nhận đã nhận đủ tiền trước khi kích hoạt.</p></div><button type="button" (click)="load()" [disabled]="loading() || requesting() || paymentBusy()">Tải lại</button></header>
+  @if (message()) { <p role="status" class="success">{{ message() }}</p> }
+  @if (currentError()) { <p role="alert" class="error">{{ currentError() }}</p> }
+  @if (current(); as current) {
+    <section class="card" aria-label="Gói hiện tại">
+      <h2>Gói hiện tại</h2>
+      @if (current.effectiveTier) { <p class="current-tier">{{ tierLabels[current.effectiveTier] }} <app-salon-subscription-badge [tier]="current.effectiveTier" /></p> }
+      @else { <p>Hiện chưa có gói đang hiệu lực. Các chức năng đặt lịch vẫn sử dụng bình thường.</p> }
+      @if (current.startsAt && current.expiresAt) { <p class="muted">{{ current.effectiveTier ? 'Thời gian hiệu lực' : 'Kỳ đã được duyệt gần nhất' }}: {{ formatTime(current.startsAt) }} – {{ formatTime(current.expiresAt) }} (giờ Việt Nam)</p> }
+      @if (current.pendingRequest; as pending) {
+        <section class="pending-request" aria-labelledby="subscription-payment-title">
+          <h3 #paymentHeading id="subscription-payment-title" tabindex="-1">Yêu cầu #{{ pending.id }} · {{ statusLabel(pending) }}</h3>
+          <p>Gói {{ tierLabels[pending.tier] }} · Số tiền cần chuyển <strong>{{ pending.quotedPrice | number:'1.0-0' }} ₫</strong></p>
+          <p class="muted">Gửi {{ formatTime(pending.createdAt) }}. Giá đã xác nhận được giữ nguyên cho yêu cầu này.</p>
+          @if (pending.quotedPrice <= 0) {
+            <p>Yêu cầu cũ chưa có số tiền chuyển khoản hợp lệ. Vui lòng liên hệ admin xử lý; không chuyển một số tiền tự chọn cho yêu cầu này.</p>
+          } @else if (pending.paymentQrUrl) {
+            <div class="payment-instructions">
+              @if (failedQr() !== pending.paymentQrUrl) { <img [src]="pending.paymentQrUrl" alt="QR nhận tiền được lưu riêng cho yêu cầu đăng ký này" width="240" height="240" (error)="failedQr.set(pending.paymentQrUrl)"> }
+              @else { <p role="alert">Chưa tải được ảnh QR. Hãy tải lại trang hoặc liên hệ admin trước khi chuyển khoản.</p> }
+              <div><p>Nội dung chuyển khoản:</p><p><code>{{ pending.transferContent }}</code></p><div class="actions"><button type="button" (click)="copyTransfer(pending.transferContent)">Sao chép nội dung</button><button type="button" (click)="copyTransfer(pending.quotedPrice.toString(), true)">Sao chép số tiền</button></div></div>
+            </div>
+            <p class="muted">Ảnh QR không tự điền số tiền và nội dung cho yêu cầu này. Hãy nhập, kiểm tra đúng số tiền và nội dung bên trên trong ứng dụng ngân hàng trước khi chuyển.</p>
+            @if (copyMessage()) { <p [attr.role]="copyFailed() ? 'alert' : 'status'">{{ copyMessage() }}</p> }
+            @if (pending.paymentReportedAt) {
+              <p role="status"><strong>Đã báo chuyển khoản lúc {{ formatTime(pending.paymentReportedAt) }}.</strong> Chờ admin kiểm tra tiền thực nhận; gói chưa được kích hoạt từ thông báo này.</p>
+              @if (pending.paymentReference) { <p>Mã giao dịch / ghi chú đã gửi: {{ pending.paymentReference }}</p> }
+            } @else {
+              <form (submit)="$event.preventDefault(); reportPayment()" aria-label="Báo đã chuyển khoản">
+                <fieldset [disabled]="paymentBusy() || loading()"><label for="subscription-payment-reference">Mã giao dịch / ghi chú (tùy chọn)<input id="subscription-payment-reference" type="text" [formControl]="reference" maxlength="100" placeholder="Tối đa 100 ký tự"></label>
+                <p class="muted">Chỉ bấm sau khi bạn đã thực hiện chuyển khoản. Đây là thông báo để admin đối soát, không phải xác nhận đã nhận tiền.</p>
+                <button type="submit" class="primary" [disabled]="paymentBusy() || loading()">{{ paymentBusy() ? 'Đang gửi…' : 'Tôi đã chuyển khoản' }}</button>
+                </fieldset>
+              </form>
+            }
+          } @else {
+            <p>Yêu cầu chưa có hướng dẫn chuyển khoản. Tải hướng dẫn để nhận QR và nội dung dành riêng cho yêu cầu đã chốt giá này.</p>
+            <button type="button" (click)="preparePayment()" [disabled]="paymentBusy() || loading()">{{ paymentBusy() ? 'Đang tải…' : 'Hiện hướng dẫn chuyển khoản' }}</button>
+          }
+          @if (paymentError()) { <p role="alert" class="error">{{ paymentError() }}</p> }
+        </section>
+      }
+    </section>
+  } @else if (loading()) { <p role="status">Đang tải gói của tiệm…</p> }
+  <section aria-labelledby="subscription-plans-title">
+    <h2 id="subscription-plans-title">Chọn gói cho tiệm</h2>
+    @if (catalogError()) { <p role="alert" class="error">{{ catalogError() }}</p> }
+    <div class="plans-grid">
+      @for (plan of plans(); track plan.tier) {
+        <article class="card plan-card" [attr.data-tier]="plan.tier">
+          <app-salon-subscription-badge [tier]="plan.tier" /><h3>{{ plan.displayName }}</h3>
+          <p class="plan-price">{{ plan.monthlyPrice === null ? 'Chưa công bố giá' : (plan.monthlyPrice | number:'1.0-0') + ' ₫ / tháng' }}</p>
+          <p>Huy hiệu {{ plan.badgeLabel }}. {{ plan.tier === 'VIP' ? 'Gói VIP hiển thị trước gói Thường và salon chưa có gói.' : 'Gói Thường hiển thị sau VIP, trước salon chưa có gói.' }}</p>
+          <p class="muted">Mỗi lần admin duyệt là một tháng theo lịch. Gia hạn cùng gói sẽ cộng tiếp từ ngày hết hạn hiện tại.</p>
+          <button type="button" class="primary" (click)="choose(plan)" [disabled]="!!blockedReason(plan) || requesting() || paymentBusy()" [attr.aria-describedby]="'plan-reason-' + plan.tier">{{ current()?.effectiveTier === plan.tier ? 'Yêu cầu gia hạn' : 'Chọn gói ' + plan.displayName }}</button>
+          <p class="muted" [id]="'plan-reason-' + plan.tier">{{ blockedReason(plan) || 'Chuyển khoản và chờ admin xác nhận đã nhận đủ tiền để kích hoạt.' }}</p>
+        </article>
+      }
+    </div>
+  </section>
+  @if (quote(); as plan) {
+    <section class="card confirmation" aria-labelledby="subscription-confirm-title">
+      <h2 #quoteHeading id="subscription-confirm-title" tabindex="-1">Xác nhận yêu cầu gói {{ plan.displayName }}</h2>
+      <p>Giá bạn đồng ý: <strong>{{ plan.monthlyPrice | number:'1.0-0' }} ₫ cho một tháng theo lịch.</strong></p>
+      <p>Bước này tạo hướng dẫn chuyển khoản theo giá trên. Bạn cần chuyển tiền và báo đã chuyển; admin xác nhận đã nhận đủ tiền mới kích hoạt. Hệ thống không tự trừ tiền.</p>
+      @if (requestError()) { <p role="alert" class="error">{{ requestError() }}</p> }
+      <div class="actions"><button type="button" class="primary" (click)="confirm()" [disabled]="requesting()">{{ requesting() ? 'Đang gửi…' : 'Đồng ý giá và gửi yêu cầu' }}</button><button type="button" (click)="cancelQuote()" [disabled]="requesting()">Quay lại</button></div>
+    </section>
+  }
+  <section class="card" aria-labelledby="subscription-history-title">
+    <h2 id="subscription-history-title">Lịch sử yêu cầu</h2>
+    @if (historyError()) { <p role="alert" class="error">{{ historyError() }}</p><button type="button" (click)="loadHistory(page())" [disabled]="historyLoading() || requesting()">Tải lại lịch sử</button> }
+    @if (historyLoading()) { <p role="status">Đang tải lịch sử…</p> }
+    @else if (!history().length && !historyError()) { <p class="empty">Tiệm chưa gửi yêu cầu đăng ký gói.</p> }
+    <div class="request-history">
+      @for (item of history(); track item.id) {
+        <article class="history-item"><div class="history-heading"><strong>#{{ item.id }} · {{ tierLabels[item.tier] }}</strong><span>{{ statusLabel(item) }}</span></div><p>{{ item.quotedPrice | number:'1.0-0' }} ₫ / tháng · Gửi {{ formatTime(item.createdAt) }}</p>
+          @if (item.paymentReportedAt) { <p class="muted">Tiệm báo chuyển khoản {{ formatTime(item.paymentReportedAt) }} @if (item.paymentReference) { · {{ item.paymentReference }} }</p> }
+          @if (item.paymentConfirmedAt) { <p>Admin xác nhận nhận {{ item.receivedAmount | number:'1.0-0' }} ₫ lúc {{ formatTime(item.paymentConfirmedAt) }}</p> }
+          @if (item.reviewedAt) { <p class="muted">Xử lý {{ formatTime(item.reviewedAt) }}</p> }
+          @if (item.reviewNote) { <p class="review-note">{{ item.reviewNote }}</p> }
+          @if (item.startsAt && item.expiresAt) { <p class="muted">Tháng được duyệt: {{ formatTime(item.startsAt) }} – {{ formatTime(item.expiresAt) }}</p> }
+        </article>
+      }
+    </div>
+    @if (total() > 0) { <nav class="pager" aria-label="Phân trang lịch sử gói"><button type="button" (click)="loadHistory(page() - 1)" [disabled]="page() === 0 || historyLoading() || requesting() || paymentBusy()">Trang trước</button><span>Trang {{ page() + 1 }} · {{ total() }} yêu cầu</span><button type="button" (click)="loadHistory(page() + 1)" [disabled]="last() || historyLoading() || requesting() || paymentBusy()">Trang sau</button></nav> }
+  </section>
+</main>

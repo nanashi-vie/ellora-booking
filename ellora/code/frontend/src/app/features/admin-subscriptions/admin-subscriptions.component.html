@@ -1,0 +1,68 @@
+<section class="admin-page">
+  <header class="admin-page-header"><div><h1>Gói đăng ký salon</h1><p>Cấu hình giá tháng và xác nhận đã nhận đủ tiền chuyển khoản trước khi kích hoạt. Không thay đổi phí nền tảng theo phần trăm.</p></div></header>
+  <section class="card" aria-labelledby="subscription-qr-title"><h2 id="subscription-qr-title">QR nhận tiền dùng chung</h2>
+    @if (qrError()) { <p role="alert" class="error">Chưa tải được trạng thái QR. {{ qrError() }}</p> }
+    @else if (qrUrl(); as url) { <p>Đã cấu hình QR nhận tiền. Mỗi yêu cầu đăng ký sẽ lưu riêng QR tại thời điểm tạo hướng dẫn.</p><img class="payment-qr" [src]="url" alt="QR nhận tiền hiện đang được nền tảng cấu hình" width="200" height="200"> }
+    @else if (!loadingPlans()) { <p>Chưa cấu hình QR nhận tiền. Gói chưa thể nhận đăng ký dù đã mở và có giá.</p> }
+    <a class="link" routerLink="/admin/billing">Quản lý QR tại Phí nền tảng</a>
+  </section>
+  <section aria-labelledby="admin-plan-title"><div class="section-heading"><h2 id="admin-plan-title">Giá và trạng thái đăng ký</h2><button type="button" (click)="loadPlans()" [disabled]="loadingPlans() || !!savingTier() || deciding()">Tải lại gói</button></div>
+    @if (planError()) { <p role="alert" class="error">{{ planError() }}</p> }
+    @if (planMessage()) { <p role="status" class="success">{{ planMessage() }}</p> }
+    @if (loadingPlans()) { <p role="status">Đang tải cấu hình gói…</p> }
+    <div class="plans-grid">
+      @for (plan of plans(); track plan.tier) {
+        <form class="card" [formGroup]="planForms[plan.tier]" (ngSubmit)="savePlan(plan.tier)" [attr.aria-label]="'Cấu hình gói ' + plan.displayName">
+          <h3>{{ plan.displayName }} · {{ plan.badgeLabel }}</h3><p class="muted">Một tháng theo lịch. Giá mới chỉ áp dụng cho yêu cầu gửi sau khi lưu.</p><p>{{ plan.registrationAvailable ? 'Sẵn sàng nhận đăng ký và chuyển khoản' : 'Chưa sẵn sàng: cần giá lớn hơn 0, mở đăng ký và QR nhận tiền.' }}</p>
+          <fieldset [disabled]="loadingPlans() || !!savingTier() || deciding()">
+            <label [for]="'plan-price-' + plan.tier">Giá tháng (₫)<input [id]="'plan-price-' + plan.tier" type="number" min="0" max="999999999999999" step="1" formControlName="monthlyPrice" [attr.aria-describedby]="'plan-price-help-' + plan.tier"></label>
+            <p class="muted" [id]="'plan-price-help-' + plan.tier">Gói mở đăng ký cần giá nguyên lớn hơn 0 ₫. Chỉ để trống hoặc giữ giá 0 khi tắt đăng ký.</p>
+            <label class="checkbox-label"><input type="checkbox" formControlName="enabled">Mở đăng ký gói</label>
+            <button type="submit" class="primary">{{ savingTier() === plan.tier ? 'Đang lưu…' : 'Lưu gói ' + plan.displayName }}</button>
+          </fieldset>
+        </form>
+      }
+    </div>
+  </section>
+  <section class="card" aria-labelledby="admin-subscription-requests-title">
+    <div class="section-heading"><div><h2 id="admin-subscription-requests-title">Yêu cầu đăng ký</h2><p class="muted">Thông báo chuyển khoản của tiệm không phải chứng từ đã nhận tiền. Kiểm tra tài khoản ngân hàng trước khi xác nhận.</p></div><button type="button" (click)="loadRequests(page())" [disabled]="loading() || deciding()">Tải lại danh sách</button></div>
+    <label for="subscription-status">Trạng thái<select id="subscription-status" [value]="filter" (change)="setFilter($any($event.target).value)" [disabled]="deciding()"><option value="PENDING">Chờ duyệt</option><option value="APPROVED">Đã duyệt</option><option value="REJECTED">Đã từ chối</option><option value="">Tất cả</option></select></label>
+    @if (error()) { <p role="alert" class="error">{{ error() }}</p> }
+    @if (message()) { <p role="status" class="success">{{ message() }}</p> }
+    @if (loading()) { <p role="status">Đang tải yêu cầu…</p> }
+    @else if (!requests().length && !error()) { <p class="empty">Không có yêu cầu trong trạng thái này.</p> }
+    <div class="table-wrap"><table><thead><tr><th>Yêu cầu / salon</th><th>Gói và giá đã xác nhận</th><th>Trạng thái / gửi lúc</th><th>Chi tiết</th></tr></thead><tbody>
+      @for (item of requests(); track item.id) { <tr [class.selected-row]="selected()?.id === item.id"><td><strong>#{{ item.id }} · {{ item.salonName }}</strong><br><span class="muted">Salon #{{ item.salonId }}</span></td><td>{{ tierLabels[item.tier] }}<br>{{ item.quotedPrice | number:'1.0-0' }} ₫ / tháng</td><td>{{ statusLabel(item) }}<br><span class="muted">{{ formatTime(item.createdAt) }}</span></td><td><button type="button" (click)="select(item)" [disabled]="loading() || deciding()" [attr.aria-label]="'Xem yêu cầu #' + item.id">Xem yêu cầu</button></td></tr> }
+    </tbody></table></div>
+    @if (total() > 0) { <nav class="pager" aria-label="Phân trang yêu cầu gói"><button type="button" (click)="loadRequests(page() - 1)" [disabled]="page() === 0 || loading() || deciding()">Trang trước</button><span>Trang {{ page() + 1 }} · {{ total() }} yêu cầu</span><button type="button" (click)="loadRequests(page() + 1)" [disabled]="last() || loading() || deciding()">Trang sau</button></nav> }
+  </section>
+  @if (selected(); as item) {
+    <section class="card request-detail" aria-labelledby="subscription-request-detail-title">
+      <h2 #requestHeading id="subscription-request-detail-title" tabindex="-1">Yêu cầu #{{ item.id }} · {{ item.salonName }}</h2><p>Salon #{{ item.salonId }} · Gói {{ tierLabels[item.tier] }} · <strong>{{ item.quotedPrice | number:'1.0-0' }} ₫ / tháng</strong></p><p>Trạng thái: {{ statusLabel(item) }} · Gửi {{ formatTime(item.createdAt) }} (giờ Việt Nam)</p>
+      <div class="payment-snapshot">@if (item.paymentQrUrl) { <img class="payment-qr" [src]="item.paymentQrUrl" alt="QR nhận tiền đã lưu trong yêu cầu của tiệm" width="200" height="200"> } @else { <p>Yêu cầu chưa có QR chuyển khoản được lưu.</p> }<div><p>Nội dung chuyển khoản: <strong>{{ item.transferContent }}</strong></p><p>Số tiền cần đối soát: <strong>{{ item.quotedPrice | number:'1.0-0' }} ₫</strong></p>
+        @if (item.paymentReportedAt) { <p>Tiệm báo chuyển khoản {{ formatTime(item.paymentReportedAt) }}</p><p>Mã giao dịch / ghi chú: {{ item.paymentReference || 'Không cung cấp' }}</p> } @else { <p>Tiệm chưa báo đã chuyển khoản.</p> }
+        @if (item.paymentConfirmedAt) { <p>Đã xác nhận nhận {{ item.receivedAmount | number:'1.0-0' }} ₫ lúc {{ formatTime(item.paymentConfirmedAt) }}</p> } @else if (item.status === 'APPROVED') { <p class="muted">Yêu cầu được duyệt trước luồng chuyển khoản; chưa có bản ghi xác nhận nhận tiền.</p> }
+      </div></div>
+      @if (item.reviewedAt) { <p>Xử lý {{ formatTime(item.reviewedAt) }}</p> }
+      @if (item.reviewNote) { <p class="review-note">{{ item.reviewNote }}</p> }
+      @if (item.startsAt && item.expiresAt) { <p>Tháng được duyệt: {{ formatTime(item.startsAt) }} – {{ formatTime(item.expiresAt) }}</p> }
+      @if (item.status === 'PENDING') {
+        <form [formGroup]="decision" (ngSubmit)="decide()" aria-label="Xét duyệt yêu cầu gói">
+          <p class="muted">Cùng gói đang hiệu lực sẽ cộng thêm một tháng từ ngày hết hạn. Không đổi sang gói khác trong khi gói hiện tại còn hiệu lực.</p>
+          <fieldset [disabled]="deciding() || !!savingTier() || loading()">
+            <label for="subscription-decision">Quyết định<select id="subscription-decision" formControlName="status"><option value="APPROVED">Duyệt và kích hoạt</option><option value="REJECTED">Từ chối yêu cầu</option></select></label>
+            @if (decision.controls.status.value === 'APPROVED') {
+              @if (!canApprove(item)) { <p class="muted">Chưa thể kích hoạt: cần giá dương, QR đã lưu và thông báo đã chuyển khoản từ tiệm. Bạn vẫn có thể chọn từ chối yêu cầu.</p> }
+              <label class="checkbox-label"><input type="checkbox" formControlName="paymentReceived" [attr.aria-describedby]="'subscription-receipt-help'">Đã nhận đủ tiền chuyển khoản</label>
+              <p id="subscription-receipt-help" class="muted">Tự kiểm tra tiền thực nhận trong tài khoản ngân hàng, khớp nội dung {{ item.transferContent }} và số tiền {{ item.quotedPrice | number:'1.0-0' }} ₫.</p>
+              <label for="subscription-received-amount">Nhập số tiền thực nhận để xác nhận (₫)<input id="subscription-received-amount" type="number" min="1" max="999999999999999" step="1" formControlName="expectedAmount" aria-required="true"></label>
+            }
+            <label for="subscription-decision-note">{{ decision.controls.status.value === 'REJECTED' ? 'Lý do từ chối (bắt buộc)' : 'Ghi chú (tùy chọn)' }}<textarea id="subscription-decision-note" formControlName="note" maxlength="1000" [required]="decision.controls.status.value === 'REJECTED'" rows="3"></textarea></label>
+            @if (decisionError()) { <p role="alert" class="error">{{ decisionError() }}</p> }
+            <button type="submit" class="primary" [disabled]="decision.controls.status.value === 'APPROVED' && (!canApprove(item) || !decision.controls.paymentReceived.value || decision.controls.expectedAmount.value !== item.quotedPrice)">{{ deciding() ? 'Đang lưu…' : decision.controls.status.value === 'APPROVED' ? 'Xác nhận đã nhận tiền và kích hoạt' : 'Xác nhận từ chối yêu cầu' }}</button>
+          </fieldset>
+        </form>
+      }
+    </section>
+  }
+</section>

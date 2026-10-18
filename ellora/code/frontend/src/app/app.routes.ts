@@ -17,6 +17,7 @@ export const routes: Routes = [
       { path: 'billing', loadComponent: () => import('./features/admin-content/billing.component').then(m => m.AdminBillingComponent) },
       { path: 'approvals', loadComponent: () => import('./features/admin-approvals/admin-approvals.component').then(m => m.AdminApprovalsComponent) },
       { path: 'salon-changes', loadComponent: () => import('./features/admin-approvals/salon-changes.component').then(m => m.SalonChangesComponent) },
+      { path: 'subscriptions', loadComponent: () => import('./features/admin-subscriptions/admin-subscriptions.component').then(m => m.AdminSubscriptionsComponent) },
       { path: 'booking-disputes', loadComponent: () => import('./features/admin-booking-disputes/admin-booking-disputes.component').then(m => m.AdminBookingDisputesComponent) }
     ]
   },
@@ -101,6 +102,10 @@ export const routes: Routes = [
       {
         path: 'billing',
         loadComponent: () => import('./features/owner/dashboard/billing-page.component').then(m => m.OwnerBillingPage)
+      },
+      {
+        path: 'subscription',
+        loadComponent: () => import('./features/owner/subscription/owner-subscription.component').then(m => m.OwnerSubscriptionComponent)
       },
       {
         path: 'services',

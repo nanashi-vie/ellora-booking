@@ -11,6 +11,7 @@ import java.util.List;
 @Repository
 public interface NailServiceRepository extends JpaRepository<NailService, Long> {
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "category")
     List<NailService> findBySalonIdAndActiveTrue(Long salonId);
 
     Page<NailService> findBySalonId(Long salonId, Pageable pageable);
