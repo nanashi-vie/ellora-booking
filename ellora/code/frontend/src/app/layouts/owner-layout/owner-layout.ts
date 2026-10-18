@@ -1,9 +1,11 @@
-import { Component, ElementRef, HostListener, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { BookingService } from '../../services/booking.service';
 import { BookingContactComponent } from '../../shared/components/booking-contact.component';
+import { SupportContact, SupportContactApiService } from '../../services/support-contact-api.service';
+import { ownerError } from '../../services/owner-api.service';
 @Component({
   selector: 'app-owner-layout',
   standalone: true,
@@ -16,11 +18,16 @@ export class OwnerLayout implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly elementRef = inject(ElementRef);
   private readonly bookingService = inject(BookingService);
+  private readonly supportApi = inject(SupportContactApiService);
 
   userName = '';
   userInitial = '';
   isDropdownOpen = false;
   isNotificationOpen = false;
+  readonly isSupportOpen = signal(false);
+  readonly supportLoading = signal(false);
+  readonly supportError = signal('');
+  readonly supportContact = signal<SupportContact | null>(null);
 
   soundEnabled = this.bookingService.soundEnabled;
   ringing = this.bookingService.ringing;
@@ -71,6 +78,26 @@ export class OwnerLayout implements OnInit, OnDestroy {
       this.isDropdownOpen = false;
     }
   }
+
+  addBooking(): void {
+    this.isDropdownOpen = false;
+    this.isNotificationOpen = false;
+    void this.router.navigate(['/owner/bookings'], { queryParams: { newBooking: 'walk-in' } });
+  }
+
+  async openSupport(): Promise<void> {
+    this.isSupportOpen.set(true);
+    this.supportLoading.set(true);
+    this.supportError.set('');
+    try { this.supportContact.set(await this.supportApi.get()); }
+    catch (error) { this.supportError.set(ownerError(error)); }
+    finally { this.supportLoading.set(false); }
+  }
+
+  closeSupport(): void { this.isSupportOpen.set(false); }
+
+  @HostListener('document:keydown.escape')
+  closeSupportOnEscape(): void { this.closeSupport(); }
 
   focusBooking(id: number): void {
     this.bookingService.focusedBookingId.set(id);
