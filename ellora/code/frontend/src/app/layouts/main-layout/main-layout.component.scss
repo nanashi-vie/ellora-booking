@@ -75,9 +75,9 @@
 .main-layout--home .page-surface {
   background: transparent;
   padding-top: 0;
-  // The homepage is a long scrolling surface; clipping/paint containment forces
-  // browsers to repaint a large layer while the user scrolls.
-  overflow: visible;
+  // Preserve the rounded footer reveal without turning the long homepage into
+  // a scroll container or restoring the previous paint containment.
+  overflow: clip;
   clip-path: none;
   contain: none;
   transform: none;
