@@ -1,0 +1,22 @@
+/* Global names keep optimized component media rules and keyframes in agreement. */
+@keyframes ellora-seasonal-fall {
+  0% { opacity: 0; transform: translate3d(0, -40px, 0) rotate(-20deg); }
+  16%, 76% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(var(--drift), 130px, 0) rotate(100deg); }
+}
+@keyframes ellora-seasonal-float {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-16deg); }
+  50% { transform: translate3d(var(--drift), 12px, 0) rotate(17deg); }
+}
+@keyframes ellora-seasonal-wave {
+  from { transform: translateX(0); }
+  to { transform: translateX(64px); }
+}
+@keyframes ellora-seasonal-frame {
+  0%, 100% { opacity: .45; }
+  50% { opacity: .95; }
+}
+@keyframes ellora-vip-sprig-sway {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(4deg); }
+}
