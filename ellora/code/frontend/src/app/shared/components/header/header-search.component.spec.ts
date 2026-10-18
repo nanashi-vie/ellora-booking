@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthService } from '../../../services/auth.service';
+import { ProfileApiService } from '../../../services/profile-api.service';
 import { PublicSalonSearchService } from '../../../services/public-salon-search.service';
 import { Header } from './header.component';
 
@@ -14,7 +15,8 @@ describe('Header search integration', () => {
   beforeEach(async () => {
     TestBed.configureTestingModule({ imports: [Header], providers: [
       provideRouter([{ path: 'search', component: EmptyPage }, { path: 'salon/:id', component: EmptyPage }]),
-      { provide: AuthService, useValue: { isAuthenticated: vi.fn().mockResolvedValue(false) } }
+      { provide: AuthService, useValue: { isAuthenticated: vi.fn().mockResolvedValue(false) } },
+      { provide: ProfileApiService, useValue: { getCurrentUser: vi.fn() } }
     ] });
     router = TestBed.inject(Router); await router.navigateByUrl('/salon/1');
     fixture = TestBed.createComponent(Header); fixture.detectChanges(); await fixture.whenStable(); fixture.detectChanges();
