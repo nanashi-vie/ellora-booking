@@ -1,4 +1,5 @@
 @import 'leaflet/dist/leaflet.css';
+@import './styles/seasonal-keyframes.css';
 
 @tailwind base;
 @tailwind components;
