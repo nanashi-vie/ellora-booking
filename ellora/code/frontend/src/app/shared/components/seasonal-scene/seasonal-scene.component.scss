@@ -28,16 +28,12 @@
 .seasonal-toggle:hover { background: #fcebf2; }
 .motion-note { color: #78666f; font-size: 11px; }
 @media (prefers-reduced-motion: no-preference) {
-  .is-running .piece-motion { animation: seasonal-fall var(--duration) linear var(--delay) infinite; }
-  .is-running[data-season=summer] .piece-motion { animation-name: seasonal-float; }
-  .is-running .seasonal-frame { animation: seasonal-frame 10s ease-in-out infinite; }
-  .is-running .wave--front { animation: seasonal-wave 12s linear infinite; }
-  .is-running .wave--back { animation: seasonal-wave 18s linear reverse infinite; }
+  .is-running .piece-motion { animation: ellora-seasonal-fall var(--duration) linear var(--delay) infinite; }
+  .is-running[data-season=summer] .piece-motion { animation-name: ellora-seasonal-float; }
+  .is-running .seasonal-frame { animation: ellora-seasonal-frame 10s ease-in-out infinite; }
+  .is-running .wave--front { animation: ellora-seasonal-wave 12s linear infinite; }
+  .is-running .wave--back { animation: ellora-seasonal-wave 18s linear reverse infinite; }
 }
-@keyframes seasonal-fall { 0% { opacity: 0; transform: translate3d(0,-40px,0) rotate(-20deg); } 16%, 76% { opacity: 1; } 100% { opacity: 0; transform: translate3d(var(--drift),130px,0) rotate(100deg); } }
-@keyframes seasonal-float { 0%, 100% { transform: translate3d(0,0,0) rotate(-16deg); } 50% { transform: translate3d(var(--drift),12px,0) rotate(17deg); } }
-@keyframes seasonal-wave { from { transform: translateX(0); } to { transform: translateX(64px); } }
-@keyframes seasonal-frame { 0%, 100% { opacity: .45; } 50% { opacity: .95; } }
 @media (max-width: 767px) {
   .seasonal-piece:nth-of-type(n + 7) { display: none; }
   .seasonal-piece { width: min(var(--piece-size), 18px); height: min(var(--piece-size), 18px); opacity: .6; }
