@@ -8,7 +8,7 @@
           {{ salonName() || (salonLoadError() ? 'Chưa tải được tên salon' : 'Đang tải tên salon…') }}
         </p>
         
-        <button class="w-full mt-4 bg-[#F2A4BB] hover:bg-[#E88AA4] text-white py-2.5 rounded-md font-medium flex items-center justify-center gap-2 transition-colors">
+        <button type="button" (click)="addBooking()" class="w-full mt-4 bg-[#F2A4BB] hover:bg-[#E88AA4] text-white py-2.5 rounded-md font-medium flex items-center justify-center gap-2 transition-colors">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           Thêm đặt lịch mới
         </button>
@@ -62,10 +62,10 @@
     <div class="mb-6">
       <div class="h-px bg-gray-100 mx-6 mb-4"></div>
       <nav class="flex flex-col text-[14px] font-medium text-gray-600">
-        <a href="#" class="flex items-center gap-3 px-6 py-3 hover:bg-gray-50 transition-colors">
+        <button type="button" (click)="openSupport()" class="w-full flex items-center gap-3 px-6 py-3 text-left hover:bg-gray-50 transition-colors">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
           Hỗ trợ
-        </a>
+        </button>
         <a href="#" class="flex items-center gap-3 px-6 py-3 hover:bg-gray-50 transition-colors">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           Cài đặt
@@ -180,3 +180,27 @@
     <router-outlet></router-outlet>
   </div>
 </div>
+
+@if (isSupportOpen()) {
+  <div class="support-backdrop" (click)="closeSupport()">
+    <section class="support-dialog" role="dialog" aria-modal="true" aria-labelledby="support-title" (click)="$event.stopPropagation()">
+      <button type="button" class="support-close" aria-label="Đóng hỗ trợ" (click)="closeSupport()">×</button>
+      <div class="support-mark" aria-hidden="true">♡</div>
+      <h2 id="support-title">Hỗ trợ Ellora</h2>
+      <p class="support-intro">Liên hệ đội ngũ quản trị nếu bạn cần trợ giúp.</p>
+      @if (supportLoading()) {
+        <p role="status">Đang tải thông tin liên hệ…</p>
+      } @else if (supportError()) {
+        <p class="support-error" role="alert">{{ supportError() }}</p>
+        <button type="button" class="support-retry" (click)="openSupport()">Thử tải lại</button>
+      } @else {
+        <div class="support-links">
+          @if (supportContact()?.email) { <a [href]="'mailto:' + supportContact()!.email"><span aria-hidden="true">✉</span><span><small>Email</small>{{ supportContact()!.email }}</span></a> }
+          @if (supportContact()?.phone) { <a [href]="'tel:' + supportContact()!.phone"><span aria-hidden="true">☎</span><span><small>Điện thoại</small>{{ supportContact()!.phone }}</span></a> }
+          @if (supportContact()?.facebookUrl) { <a [href]="supportContact()!.facebookUrl" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">f</span><span><small>Facebook</small>Nhắn tin cho Ellora</span></a> }
+          @if (!supportContact()?.email && !supportContact()?.phone && !supportContact()?.facebookUrl) { <p>Admin chưa cập nhật thông tin liên hệ. Vui lòng quay lại sau.</p> }
+        </div>
+      }
+    </section>
+  </div>
+}

@@ -50,6 +50,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/ping", "/ping/db").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/support/contact").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/salon-plans").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/customer/salons/**").permitAll()

@@ -15,6 +15,7 @@ export const routes: Routes = [
       { path: 'users', loadComponent: () => import('./features/admin-users/admin-users.component').then(m => m.AdminUsersComponent) },
       { path: 'content', loadComponent: () => import('./features/admin-content/admin-content.component').then(m => m.AdminContentComponent) },
       { path: 'billing', loadComponent: () => import('./features/admin-content/billing.component').then(m => m.AdminBillingComponent) },
+      { path: 'support', loadComponent: () => import('./features/admin-content/support-contact.component').then(m => m.AdminSupportContactComponent) },
       { path: 'approvals', loadComponent: () => import('./features/admin-approvals/admin-approvals.component').then(m => m.AdminApprovalsComponent) },
       { path: 'salon-changes', loadComponent: () => import('./features/admin-approvals/salon-changes.component').then(m => m.SalonChangesComponent) },
       { path: 'subscriptions', loadComponent: () => import('./features/admin-subscriptions/admin-subscriptions.component').then(m => m.AdminSubscriptionsComponent) },

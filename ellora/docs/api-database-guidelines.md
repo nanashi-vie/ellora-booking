@@ -44,6 +44,8 @@ POST /api/reviews                      # Tạo review mới cho salon sau khi bo
 GET /api/salons/{salonId}/reviews      # Lấy danh sách review của salon
 ```
 
+Thông tin hỗ trợ nền tảng gồm `GET /api/support/contact` (public, chỉ trả email/số điện thoại/link Facebook đã cấu hình) và `PUT /api/admin/support/contact` (chỉ ADMIN). Thông tin được chỉnh ở `/admin/support`; Supabase cần áp dụng `code/backend/src/main/resources/db/platform-support-contact.sql` trước khi deploy vì production dùng `ddl-auto:none`.
+
 ### 1.2. Nguyên tắc thiết kế API
 
 Giám sát dùng `GET /api/ping` cho liveness không truy cập database; `GET /api/ping/db` kiểm tra readiness bằng `SELECT 1` qua pool hiện có. Readiness trả 200 khi thành công hoặc 503 với thông báo chung khi lỗi/bận, luôn `Cache-Control: no-store`; data gồm `status: UP|DOWN` và `latencyMs`, không chứa thông tin kết nối/lỗi SQL. Chỉ một probe DB được chạy trên mỗi backend instance. Timeout câu lệnh JDBC là 3 giây, tách biệt timeout lấy kết nối Hikari hiện tại 30 giây; đây không phải cam kết HTTP hoàn thành trong 3 giây. UptimeRobot có thể dùng URL readiness khi muốn giám sát cả database. Chi tiết và kiểm chứng: `decisions/2026-10-18-database-readiness-ping.md`.

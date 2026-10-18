@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal, effect, ElementRef, OnInit, PLATFORM_ID } from '@angular/core';
+import { Component, computed, inject, signal, effect, ElementRef, OnInit, PLATFORM_ID, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { BookingService, BookingEvent } from '../../../services/booking.service';
@@ -7,6 +7,8 @@ import { BookingItem } from '../../../services/booking-api.service';
 import { WalkInFormComponent } from './walk-in-form.component';
 import { vnDate } from '../../../services/billing-api.service';
 import { BookingContactComponent } from '../../../shared/components/booking-contact.component';
+import { ActivatedRoute, Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface Staff {
   id: number;
@@ -56,6 +58,9 @@ export class BookingManagement implements OnInit {
   private readonly ownerApi = inject(OwnerApiService);
   private readonly elementRef = inject(ElementRef);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly cdr = inject(ChangeDetectorRef);
   
   bookings = this.bookingService.bookings;
   error = this.bookingService.error;
@@ -87,6 +92,18 @@ export class BookingManagement implements OnInit {
   }
 
   constructor() {
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe(params => {
+      if (params.get('newBooking') !== 'walk-in') return;
+      this.isSidebarOpen = true;
+      this.cdr.markForCheck();
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { newBooking: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+    });
+
     effect((onCleanup) => {
       const focusedId = this.bookingService.focusedBookingId();
       const booking = this.bookings().find(item => item.id === focusedId);
