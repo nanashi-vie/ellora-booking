@@ -31,7 +31,8 @@ interface AdminRevenueReport {
   selector: 'app-admin-dashboard',
   standalone: true,
   imports: [CommonModule, FormsModule, BaseChartDirective],
-  providers: [provideCharts(withDefaultRegisterables())],
+  // Canvas text does not inherit the page's CSS font.
+  providers: [provideCharts(withDefaultRegisterables(), { defaults: { font: { family: 'Inter, system-ui, sans-serif' } } })],
   styleUrl: '../admin-content/admin-page.scss',
   template: `
     <section class="admin-page">

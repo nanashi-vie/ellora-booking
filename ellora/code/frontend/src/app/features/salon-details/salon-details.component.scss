@@ -133,7 +133,7 @@
   min-width: 0;
   max-width: 100%;
   overflow-wrap: anywhere;
-  font-family: 'Minion Pro', Georgia, serif;
+  font-family: var(--font-serif);
   font-size: 32px;
   font-weight: 500;
   color: #2c2a29;
@@ -250,7 +250,7 @@
 /* ─── Section Title ─── */
 
 .section-title {
-  font-family: 'Minion Pro', Georgia, serif;
+  font-family: var(--font-serif);
   font-size: 28px;
   font-weight: 500;
   color: #2c2a29;
@@ -303,7 +303,7 @@
 }
 
 .location-card__area {
-  font-family: 'Minion Pro', Georgia, serif;
+  font-family: var(--font-serif);
   font-size: 20px;
   font-weight: 600;
   color: #2c2a29;
@@ -787,7 +787,7 @@
 }
 
 .booking-widget__title {
-  font-family: 'Minion Pro', Georgia, serif;
+  font-family: var(--font-serif);
   font-size: 26px;
   font-weight: 600;
   line-height: 1.2;

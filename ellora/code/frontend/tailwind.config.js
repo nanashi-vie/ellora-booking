@@ -35,8 +35,8 @@ module.exports = {
         }
       },
       fontFamily: {
-        'serif': ['Minion Pro', 'ui-serif', 'Georgia', 'serif'],
-        'sans': ['Inter', 'system-ui', 'sans-serif'],
+        'serif': ['var(--font-serif)'],
+        'sans': ['var(--font-sans)'],
       }
     },
   },

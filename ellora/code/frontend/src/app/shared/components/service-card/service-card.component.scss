@@ -21,7 +21,7 @@
 }
 
 .service-card__name {
-  font-family: 'Minion Pro', Georgia, serif;
+  font-family: var(--font-serif);
   font-size: 18px;
   font-weight: 500;
   color: #2c2a29;
@@ -61,7 +61,7 @@
 }
 
 .service-card__price {
-  font-family: 'Minion Pro', Georgia, serif;
+  font-family: var(--font-sans);
   font-size: 20px;
   font-weight: 600;
   color: #2c2a29;

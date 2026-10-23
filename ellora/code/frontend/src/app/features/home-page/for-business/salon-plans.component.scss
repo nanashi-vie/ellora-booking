@@ -2,13 +2,13 @@
 .plans { max-width: 1100px; margin: 0 auto; padding: 64px 40px; color: #34242b; }
 .plans__heading { max-width: 650px; margin-bottom: 32px; }
 .plans__eyebrow { margin: 0 0 14px; font-size: 11px; letter-spacing: .12em; font-weight: 700; color: #94435c; }
-h2 { font-family: 'Times New Roman', Georgia, serif; font-size: clamp(28px, 3vw, 36px); line-height: 1.2; margin: 0 0 16px; font-weight: 700; scroll-margin-top: 140px; }
+h2 { font-family: var(--font-serif); font-size: clamp(28px, 3vw, 36px); line-height: 1.2; margin: 0 0 16px; font-weight: 700; scroll-margin-top: 140px; }
 .plans__heading > p:last-child { color: #73606a; line-height: 1.7; margin: 0; }
 .plans__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 .plan { border: 1px solid #e7d4dc; border-radius: 20px; background: #fff; padding: 32px; min-width: 0; }
 .plan--vip { border-color: #b65b77; background: #fff7fa; }
 .plan__top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
-h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 26px; margin: 0; font-weight: 700; }
+h3 { font-family: var(--font-serif); font-size: 26px; margin: 0; font-weight: 700; }
 .plan__order { color: #94435c; font-size: 11px; font-weight: 700; white-space: nowrap; }
 .plan__price { padding: 28px 0 24px; margin-bottom: 24px; border-bottom: 1px solid #eddee4; }
 .plan__price p { margin: 0 0 8px; overflow-wrap: anywhere; }
