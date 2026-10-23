@@ -6,6 +6,12 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --primary-action: #f9a8b6;
+  --primary-action-hover: #f493a4;
+  --primary-action-base: #df8297;
+}
+
 @layer base {
   html,
   body {

@@ -21,8 +21,8 @@ li::marker { color: #ad4c6c; }
 .plans__footer { display: flex; align-items: center; justify-content: space-between; gap: 32px; margin-top: 28px; }
 .plans__footer p { margin: 0 0 6px; font-size: 14px; font-weight: 700; }
 .plans__footer span { display: block; max-width: 640px; font-size: 13px; color: #73606a; line-height: 1.7; }
-.plans__footer a { flex-shrink: 0; padding: 13px 22px; border-radius: 99px; background: #9c3e5d; color: white; text-decoration: none; font-size: 14px; font-weight: 700; }
-.plans__footer a:hover { background: #7b263e; }
+.plans__footer a { flex-shrink: 0; padding: 13px 22px; border-radius: 99px; background: var(--primary-action); color: white; text-decoration: none; font-size: 14px; font-weight: 700; }
+.plans__footer a:hover { background: var(--primary-action-hover); }
 .plans__error { color: #9a2539; padding: 12px 0 24px; font-size: 14px; }
 .plans__error button { color: inherit; font-weight: 700; background: none; border: 0; text-decoration: underline; cursor: pointer; padding: 6px; }
 a:focus-visible, button:focus-visible { outline: 2px solid #9c3e5d; outline-offset: 4px; }

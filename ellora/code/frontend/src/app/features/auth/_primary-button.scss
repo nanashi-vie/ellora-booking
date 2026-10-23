@@ -1,7 +1,7 @@
 @mixin primary-button {
-  --auth-button-face: #c04a76;
-  --auth-button-hover: #ad4168;
-  --auth-button-base: #81334f;
+  --auth-button-face: var(--primary-action);
+  --auth-button-hover: var(--primary-action-hover);
+  --auth-button-base: var(--primary-action-base);
 
   position: relative;
   margin-bottom: 6px;
@@ -27,7 +27,7 @@
   }
 
   &:focus-visible {
-    outline: 3px solid #81334f;
+    outline: 3px solid #833451;
     outline-offset: 4px;
   }
 

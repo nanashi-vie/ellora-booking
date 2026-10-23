@@ -11,7 +11,7 @@
         @if (user().avatarUrl) { <img [src]="user().avatarUrl" alt="Ảnh đại diện cá nhân" class="w-full h-full object-cover" /> } @else {
         <span class="w-full h-full flex items-center justify-center bg-dusty-pink-500/10 text-dusty-pink-700 text-4xl font-serif" aria-label="Ảnh đại diện mặc định">{{ user().firstName.charAt(0) || '?' }}</span> }
       </div>
-      <button disabled title="Tải ảnh đại diện chưa khả dụng" class="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-dusty-pink-600 text-white flex items-center justify-center shadow-md opacity-50 border-2 border-white">
+      <button disabled title="Tải ảnh đại diện chưa khả dụng" class="bg-primary hover:bg-primary-hover text-white absolute bottom-0 right-0 w-8 h-8 rounded-full   flex items-center justify-center shadow-md opacity-50 border-2 border-white">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
       </button>
     </div>

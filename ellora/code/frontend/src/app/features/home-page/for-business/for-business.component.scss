@@ -19,7 +19,7 @@
   display: inline-flex;
   align-items: center;
   padding: 14px 28px;
-  background: #E8829A;
+  background: var(--primary-action);
   color: #fff;
   font-size: 15px;
   font-weight: 700;
@@ -30,7 +30,7 @@
   transition: background 0.2s;
 
   &:hover {
-    background: #d96880;
+    background: var(--primary-action-hover);
   }
 }
 

@@ -79,9 +79,9 @@ button,
 }
 button.primary,
 .link {
-  background: #8c3a5a;
+  background: var(--primary-action);
   color: white;
-  border-color: #8c3a5a;
+  border-color: var(--primary-action-base);
 }
 button:disabled {
   opacity: 0.5;
@@ -151,3 +151,5 @@ th {
     padding: 16px;
   }
 }
+
+button.primary:hover:enabled, .link:hover { background: var(--primary-action-hover); }

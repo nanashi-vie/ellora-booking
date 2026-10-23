@@ -28,7 +28,7 @@ import { SalonRegistration, SalonRegistrationService } from '../../services/salo
               <input [id]="field.key" [type]="field.type" [formControlName]="field.key" class="w-full border rounded px-3 py-2" [required]="field.required">
             </div>
           }
-          <button type="submit" [disabled]="saving()" class="bg-charcoal-900 text-white px-6 py-3 rounded disabled:opacity-50">{{ saving() ? 'Đang gửi…' : 'Gửi đăng ký xét duyệt' }}</button>
+          <button type="submit" [disabled]="saving()" class="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded disabled:opacity-50">{{ saving() ? 'Đang gửi…' : 'Gửi đăng ký xét duyệt' }}</button>
         </form>
       }
       @if (loadFailed()) { <button type="button" (click)="load()" class="underline">Thử tải lại</button> }

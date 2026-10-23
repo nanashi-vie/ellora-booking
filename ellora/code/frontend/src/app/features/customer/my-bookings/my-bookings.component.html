@@ -65,7 +65,7 @@
           </span>
           @if (booking.status === 'COMPLETED') {
             @if (booking.reviewed) { <span class="text-sm text-emerald-700">Đã đánh giá</span> }
-            @else if (canReview(booking)) { <button type="button" (click)="openReview(booking)" [disabled]="reviewSaving()" class="px-4 py-2 rounded bg-dusty-pink-500 text-white text-sm">Đánh giá</button> }
+            @else if (canReview(booking)) { <button type="button" (click)="openReview(booking)" [disabled]="reviewSaving()" class="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded   text-sm">Đánh giá</button> }
           }
           @if (booking.status === 'PENDING' || booking.status === 'CONFIRMED') { <button type="button" class="text-sm text-red-700" (click)="cancel(booking.id)">Hủy lịch</button> }
           
@@ -127,7 +127,7 @@
             </fieldset>
             @if (reviewError()) { <p role="alert" class="text-red-600 my-3">{{ reviewError() }}</p> }
             <div class="flex gap-3 mt-4">
-              <button type="submit" [disabled]="reviewSaving()" class="px-4 py-2 rounded bg-dusty-pink-500 text-white disabled:opacity-50">{{ reviewSaving() ? 'Đang gửi...' : 'Gửi đánh giá' }}</button>
+              <button type="submit" [disabled]="reviewSaving()" class="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded   disabled:opacity-50">{{ reviewSaving() ? 'Đang gửi...' : 'Gửi đánh giá' }}</button>
               <button type="button" [disabled]="reviewSaving()" (click)="reviewId.set(null)" class="px-4 py-2 border rounded">Hủy</button>
             </div>
           </form>

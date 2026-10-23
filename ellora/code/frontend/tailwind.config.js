@@ -6,6 +6,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        primary: { DEFAULT: 'var(--primary-action)', hover: 'var(--primary-action-hover)' },
         'rose': {
           100: '#edbec8',
           300: '#e49daf',
