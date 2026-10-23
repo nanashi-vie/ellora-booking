@@ -1,3 +1,5 @@
+@use '../primary-button' as auth-button;
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -275,50 +277,14 @@ input:focus + svg,
 }
 
 .btn-register {
+  @include auth-button.primary-button;
   width: 100%;
   padding: 15px;
-  background: linear-gradient(135deg, #f48bb6, #f7a8c8);
-  color: var(--white);
   font-family: var(--font-sans);
   font-size: 1rem;
   font-weight: 600;
   letter-spacing: .06em;
-  border: none;
   border-radius: var(--radius);
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  transition: background .2s, transform .15s;
-}
-
-.btn-register::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(120deg, transparent 30%, rgba(255, 255, 255, .08) 50%, transparent 70%);
-  transform: translateX(-100%);
-  transition: transform .5s;
-}
-
-.btn-register:hover {
-  background: linear-gradient(135deg, #e875a6, #f48bb6);
-}
-
-.btn-register:hover::after {
-  transform: translateX(100%);
-}
-
-.btn-register:active {
-  transform: scale(.98);
-}
-
-.btn-register:disabled {
-  opacity: .6;
-  cursor: not-allowed;
-}
-
-.btn-register.success {
-  background: #2d7a4f;
 }
 
 .btn-inner {

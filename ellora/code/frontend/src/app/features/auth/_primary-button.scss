@@ -1,0 +1,56 @@
+@mixin primary-button {
+  --auth-button-face: #c04a76;
+  --auth-button-hover: #ad4168;
+  --auth-button-base: #81334f;
+
+  position: relative;
+  margin-bottom: 6px;
+  border: 0;
+  color: #fff;
+  background: var(--auth-button-face);
+  box-shadow: inset 0 0 0 2px var(--auth-button-base), 0 6px 0 var(--auth-button-base);
+  cursor: pointer;
+  transition: background-color 175ms linear, box-shadow 175ms linear, transform 175ms linear;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled):not(.loading):not(.success) {
+      background: var(--auth-button-hover);
+      box-shadow: inset 0 0 0 2px var(--auth-button-base), 0 3px 0 var(--auth-button-base);
+      transform: translateY(3px);
+    }
+  }
+
+  &:active:not(:disabled):not(.loading):not(.success) {
+    background: var(--auth-button-hover);
+    box-shadow: inset 0 0 0 2px var(--auth-button-base);
+    transform: translateY(6px);
+  }
+
+  &:focus-visible {
+    outline: 3px solid #81334f;
+    outline-offset: 4px;
+  }
+
+  &:disabled,
+  &.loading {
+    opacity: .6;
+    cursor: not-allowed;
+    transform: none;
+    transition: none;
+  }
+
+  &.success {
+    --auth-button-face: #2d7a4f;
+    --auth-button-hover: #2d7a4f;
+    --auth-button-base: #1f5b3a;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+
+    &:hover:not(:disabled):not(.loading):not(.success),
+    &:active:not(:disabled):not(.loading):not(.success) {
+      transform: none;
+    }
+  }
+}

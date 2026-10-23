@@ -1,3 +1,5 @@
+@use '../primary-button' as auth-button;
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -309,63 +311,14 @@ input:focus + svg,
 }
 
 .btn-login {
+  @include auth-button.primary-button;
   width: 100%;
   padding: 15px;
-  background: linear-gradient(135deg, #f48bb6, #f7a8c8);
-  color: var(--white);
   font-family: var(--font-sans);
   font-size: 1rem;
   font-weight: 600;
   letter-spacing: .06em;
-  border: none;
   border-radius: var(--radius);
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-  transition: background .2s, box-shadow .2s, transform .15s;
-}
-
-.btn-login::before {
-  content: '';
-  position: absolute;
-  inset: 5px;
-  z-index: -1;
-  background: rgba(143, 72, 105, .32);
-  border-radius: calc(var(--radius) - 4px);
-  transform: translateY(120%) scale(.92);
-  transform-origin: bottom center;
-  transition: transform .42s cubic-bezier(.76, 0, .24, 1), background .2s;
-}
-
-.btn-login:hover:not(:disabled):not(.success),
-.btn-login:focus-visible:not(:disabled):not(.success) {
-  background: linear-gradient(135deg, #f7a8c8, #e875a6);
-  box-shadow: 0 12px 26px rgba(244, 139, 182, .28);
-}
-
-.btn-login:hover:not(:disabled):not(.success)::before,
-.btn-login:focus-visible:not(:disabled):not(.success)::before {
-  background: rgba(143, 72, 105, .46);
-  transform: translateY(0) scale(1);
-}
-
-.btn-login:focus-visible {
-  outline: 3px solid rgba(143, 72, 105, .24);
-  outline-offset: 4px;
-}
-
-.btn-login:active {
-  transform: scale(.98);
-}
-
-.btn-login:disabled {
-  opacity: .6;
-  cursor: not-allowed;
-}
-
-.btn-login.success {
-  background: #2d7a4f;
 }
 
 .btn-inner {
@@ -495,13 +448,6 @@ input:focus + svg,
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .btn-login,
-  .btn-login::before,
-  .btn-text {
-    transition-duration: 1ms;
-  }
-}
 .confirmation-copy {
   margin-bottom: 20px;
 }
