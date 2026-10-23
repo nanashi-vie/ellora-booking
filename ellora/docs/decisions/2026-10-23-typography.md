@@ -1,11 +1,18 @@
 # Typography consistency
 
-- Use Minion Pro for headings and Inter for body text, controls, buttons, prices and metrics. CSS variables `--font-serif` and `--font-sans` in `src/styles.css` are shared by component styles and Tailwind utilities.
+- Use Minion Pro for headings and Inter for body text, controls, buttons, prices and metrics. CSS variables `--font-serif` and `--font-sans` in `src/styles/fonts.css` are shared by component styles and Tailwind utilities.
 - Reuse the existing Minion Pro assets, including their real italic weights. Bundle Inter 5.3.0 Latin, Latin Extended and Vietnamese variable fonts (normal and italic) from `@fontsource-variable/inter`, licensed OFL-1.1; retain its license in `public/fonts/inter/LICENSE`. Fonts use `font-display: swap`. No runtime dependency or external Google Fonts stylesheet is needed.
 - Chart.js canvas labels need explicit Inter defaults in the existing owner/admin chart providers because canvas does not inherit CSS fonts.
 - Override Leaflet's container font so map popups, addresses and attribution use Inter too; preserve the library's zoom-control symbol fonts.
 - Authentication forms use 600 weight for labels/actions and enough line height for Vietnamese accents. Remove text shadows that doubled letter edges. At the existing mobile breakpoint, set form-panel flex basis to 100% so the intended full-width layout also works with Inter; allow login metadata to wrap.
 - Keep colors, routes, APIs and business behavior unchanged.
+
+## Asset consolidation and Vietnamese footer
+
+- Keep both font families under `code/frontend/public/fonts/`; consolidate all font-face declarations and family tokens in `src/styles/fonts.css`. Remove the byte-identical `docs/minion-pro-webfont` copy, unused condensed Minion variants and generated font demos.
+- Translate visible footer copy and social-link accessible names into Vietnamese while retaining its layout, colors and existing destinations.
+- Remove old unreferenced UI screenshot exports from `docs/images` (the byte-identical homepage asset remains in `public`), three completed merge/release reports and Finder metadata. Preserve core guidelines, operational instructions and technical decision records; add `docs/README.md` as the documentation index.
+- Follow-up verification: production build passed; 20 auth/home-rendering tests passed using the temporary isolated test setup described below. All 23 local documentation links and 14 font URLs resolve; homepage demo bytes are unchanged. Footer reviewed at 390px and 1440px with no horizontal overflow; browser asset inventory confirms the consolidated fonts load. Independent follow-up review approved.
 
 ## Verification
 
