@@ -121,7 +121,7 @@
         <!-- Right: Actions -->
         <div class="w-full md:w-[220px] shrink-0 flex flex-col gap-3 justify-center border-t md:border-t-0 md:border-l border-gray-200/60 pt-6 md:pt-0 md:pl-8">
           @if (!review.isReplied) {
-            <button type="button" (click)="replyingId.set(review.id)" class="w-full bg-[#F2A4BB] hover:bg-[#E88AA4] text-white font-bold py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-colors shadow-sm text-[15px]">
+            <button type="button" (click)="replyingId.set(review.id)" class="bg-primary hover:bg-primary-hover text-white w-full    font-bold py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-colors shadow-sm text-[15px]">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
               Phản hồi ngay
             </button>

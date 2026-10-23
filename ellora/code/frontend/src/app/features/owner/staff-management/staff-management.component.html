@@ -5,7 +5,7 @@
       <h2 class="text-[32px] font-bold text-[#8C3A5A] mb-1 font-serif">Quản Lý Nhân Viên</h2>
       <p class="text-charcoal-800/70 text-sm font-medium">Quản lý hồ sơ nhân sự, lịch trình làm việc và theo dõi hiệu suất của đội ngũ Ellora.</p>
     </div>
-    <button type="button" (click)="edit()" class="bg-[#F2A4BB] hover:bg-[#E88AA4] text-white font-bold py-2.5 px-6 rounded-full flex items-center gap-2 transition-colors shadow-sm">
+    <button type="button" (click)="edit()" class="bg-primary hover:bg-primary-hover text-white font-bold py-2.5 px-6 rounded-full flex items-center gap-2 transition-colors shadow-sm">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
       Thêm Nhân Viên
     </button>
@@ -18,7 +18,7 @@
       <label>Số điện thoại <input name="phone" required [(ngModel)]="draft.phone" class="border rounded p-2 w-full" /></label>
       <label>Giới thiệu <textarea name="bio" [(ngModel)]="draft.bio" class="border rounded p-2 w-full"></textarea></label>
       @if (editingId !== null) { <app-photo-upload kind="employees" [entityId]="editingId" [imageUrl]="employees().find(item => item.id === editingId)?.avatarUrl" label="Ảnh nhân viên" (saved)="load()" /> }
-      <div class="flex gap-3"><button type="submit" class="bg-[#F2A4BB] text-white rounded px-4 py-2">Lưu</button><button type="button" (click)="editorOpen.set(false)">Hủy</button></div>
+      <div class="flex gap-3"><button type="submit" class="bg-primary hover:bg-primary-hover text-white rounded px-4 py-2">Lưu</button><button type="button" (click)="editorOpen.set(false)">Hủy</button></div>
     </form>
   }
 

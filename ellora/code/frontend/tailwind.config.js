@@ -6,6 +6,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        primary: { DEFAULT: 'var(--primary-action)', hover: 'var(--primary-action-hover)' },
         'rose': {
           100: '#edbec8',
           300: '#e49daf',
@@ -35,8 +36,8 @@ module.exports = {
         }
       },
       fontFamily: {
-        'serif': ['Minion Pro', 'ui-serif', 'Georgia', 'serif'],
-        'sans': ['Inter', 'system-ui', 'sans-serif'],
+        'serif': ['var(--font-serif)'],
+        'sans': ['var(--font-sans)'],
       }
     },
   },
