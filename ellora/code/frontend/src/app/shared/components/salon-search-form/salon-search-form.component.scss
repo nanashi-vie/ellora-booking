@@ -10,8 +10,8 @@ input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px s
 .salon-search-nearby { display: flex; flex: 1 1 300px; flex-wrap: wrap; align-items: center; gap: 10px; min-width: 0; }
 button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 42px; padding: 9px 13px; border: 1px solid #e1c6d2; border-radius: 9px; background: #fff; color: #71334e; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 button:disabled { opacity: .6; cursor: wait; }
-.salon-search-submit { min-width: 112px; background: #f7bcd5; border-color: #f1a6c4; color: #482134; font-size: 14px; }
-.salon-search-submit:hover:enabled { background: #f3accb; }
+.salon-search-submit { min-width: 112px; background: var(--primary-action); border-color: var(--primary-action-base); color: #fff; font-size: 14px; }
+.salon-search-submit:hover:enabled { background: var(--primary-action-hover); }
 .salon-search-position-status { color: #63505a; font-size: 12px; }
 .salon-search-radius { flex-direction: row; align-items: center; gap: 8px; }
 .salon-search-radius select { width: 88px; min-height: 40px; padding: 8px; }

@@ -17,7 +17,7 @@ import { AuthService } from '../../../services/auth.service';
         <div><label for="newPassword" class="block mb-2">Mật khẩu mới</label><input id="newPassword" type="password" autocomplete="new-password" formControlName="newPassword" class="w-full border rounded-lg p-3" /></div>
         <div><label for="confirmPassword" class="block mb-2">Xác nhận mật khẩu mới</label><input id="confirmPassword" type="password" autocomplete="new-password" formControlName="confirmPassword" class="w-full border rounded-lg p-3" /></div>
         @if (message()) { <p role="status" [class.text-red-700]="error()">{{ message() }}</p> }
-        <button type="submit" [disabled]="saving()" class="bg-dusty-pink-600 text-white px-5 py-3 rounded-lg disabled:opacity-50">{{ saving() ? 'Đang lưu…' : 'Đổi mật khẩu' }}</button>
+        <button type="submit" [disabled]="saving()" class="bg-primary hover:bg-primary-hover text-white px-5 py-3 rounded-lg disabled:opacity-50">{{ saving() ? 'Đang lưu…' : 'Đổi mật khẩu' }}</button>
       </form>
     </div>
   `

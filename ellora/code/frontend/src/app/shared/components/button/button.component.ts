@@ -19,7 +19,7 @@ export class Button {
     const base = 'inline-flex items-center justify-center font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
     
     const variants = {
-      primary: 'bg-dusty-pink-500 hover:bg-dusty-pink-600 text-white shadow-sm',
+      primary: 'bg-primary hover:bg-primary-hover text-white shadow-sm',
       secondary: 'bg-white text-charcoal-900 border border-charcoal-800 hover:bg-ivory-100',
       ghost: 'bg-transparent text-charcoal-900 hover:bg-ivory-100'
     };

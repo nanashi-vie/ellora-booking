@@ -16,7 +16,8 @@ type RevenueGroup = 'day' | 'week' | 'month';
   selector: 'app-dashboard',
   standalone: true,
   imports: [CommonModule, RouterModule, BaseChartDirective, PhotoUpload],
-  providers: [provideCharts(withDefaultRegisterables())],
+  // Canvas text does not inherit the page's CSS font.
+  providers: [provideCharts(withDefaultRegisterables(), { defaults: { font: { family: 'Inter, system-ui, sans-serif' } } })],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })
