@@ -31,10 +31,6 @@ describe('Public guest booking and registered customer compatibility', () => {
     const field = root.querySelector<HTMLInputElement>(`#${id}`)!;
     field.value = value; field.dispatchEvent(new Event('input')); field.dispatchEvent(new Event('blur'));
   };
-  const fillGuest = (root: HTMLElement) => {
-    input(root, 'booking-name', '  Nguyễn Mai  '); input(root, 'booking-phone', ' 0900123456 ');
-    input(root, 'booking-email', ' mai@example.com '); input(root, 'booking-notes', 'Màu hồng nhẹ');
-  };
 
   beforeEach(async () => {
     vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-18T03:00:00Z')); vi.resetAllMocks();
@@ -64,69 +60,35 @@ describe('Public guest booking and registered customer compatibility', () => {
     await component.confirmBooking(); expect(bookingApi.createGuestBooking).not.toHaveBeenCalled();
     resolveAuth(false); await flush();
     expect(component.guestMode()).toBe(true); expect(component.authReady()).toBe(true);
-    expect(root.querySelector<HTMLInputElement>('#booking-email')!.required).toBe(true);
+    expect(root.querySelector('#booking-email')).toBeNull();
+    expect(root.textContent).toContain('Bạn cần đăng nhập tài khoản khách hàng');
     expect(auth.getUserProfile).not.toHaveBeenCalled();
   });
 
-  it('requires nonblank name, valid phone, and email and renders accessible field errors', async () => {
+  it('requires login at confirmation, saves the selected booking, and never submits as a guest', async () => {
     const { component, root } = await render();
-    input(root, 'booking-name', '   '); input(root, 'booking-phone', '0900123456');
-    await component.confirmBooking(); fixture.detectChanges();
-    expect(root.querySelector('#booking-name-error')!.textContent).toContain('họ tên');
-    expect(root.querySelector('#booking-email-error')!.textContent).toContain('email hợp lệ');
-    expect(root.querySelector('#booking-name')!.getAttribute('aria-invalid')).toBe('true');
-    input(root, 'booking-name', 'Mai'); input(root, 'booking-email', 'invalid-email'); input(root, 'booking-phone', '    ');
-    await component.confirmBooking(); fixture.detectChanges();
-    expect(root.querySelector('#booking-phone-error')).not.toBeNull();
+    component.customerForm.controls.notes.setValue('Sơn gel');
+    root.querySelector<HTMLButtonElement>('.btn-pay')!.click(); await flush();
+    expect(router.navigate).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: '/booking?salonId=1&serviceId=2' } });
+    expect(JSON.parse(sessionStorage.getItem('ellora.pendingBooking')!)).toEqual({ salonId: '1', serviceId: '2', employeeId: null, date: '2026-10-19', time: '11:37', customerNote: 'Sơn gel', createdAt: Date.now() });
     expect(bookingApi.createGuestBooking).not.toHaveBeenCalled(); expect(bookingApi.createBooking).not.toHaveBeenCalled();
   });
 
-  it('matches the API email limit of 254 characters in the input and form validator', async () => {
-    const { component, root } = await render();
-    expect(root.querySelector<HTMLInputElement>('#booking-email')!.maxLength).toBe(254);
-    const email = `${'a'.repeat(64)}@${'b'.repeat(63)}.${'c'.repeat(63)}.${'d'.repeat(61)}`;
-    expect(email.length).toBe(254); component.customerForm.controls.email.setValue(email);
-    expect(component.customerForm.controls.email.valid).toBe(true);
-    component.customerForm.controls.email.setValue(email + 'd');
-    expect(component.customerForm.controls.email.getError('maxlength')).toEqual({ requiredLength: 254, actualLength: 255 });
+  it('resumes the selected booking after the customer signs in', async () => {
+    sessionStorage.setItem('ellora.pendingBooking', JSON.stringify({ salonId: '1', serviceId: '2', employeeId: null, date: '2026-10-19', time: '11:37', customerNote: 'Sơn gel', createdAt: Date.now() }));
+    auth.isAuthenticated.mockResolvedValueOnce(true);
+    const { component } = await render();
+    expect(component.currentStep()).toBe(4); expect(component.selectedServiceIds()).toEqual(['2']);
+    expect(component.selectedDate()).toBe('2026-10-19'); expect(component.selectedTime()).toBe('11:37');
+    expect(component.customerForm.controls.notes.value).toBe('Sơn gel');
+    expect(sessionStorage.getItem('ellora.pendingBooking')).toBeNull();
   });
 
-  it('submits trimmed guest contacts and shows the receipt without an account-history redirect or countdown', async () => {
-    const { component, root } = await render(); fillGuest(root);
-    root.querySelector<HTMLButtonElement>('.btn-pay')!.click(); await flush();
-    expect(bookingApi.createGuestBooking).toHaveBeenCalledExactlyOnceWith({
-      salonId: 1, serviceId: 2, employeeId: undefined, scheduledAt: '2026-10-19T11:37:00',
-      customerNote: 'Màu hồng nhẹ', fullName: 'Nguyễn Mai', phone: '0900123456', email: 'mai@example.com'
-    });
-    expect(bookingApi.createBooking).not.toHaveBeenCalled();
-    const modal = root.querySelector<HTMLElement>('[role="dialog"]')!;
-    expect(modal.getAttribute('aria-modal')).toBe('true');
-    for (const text of ['#123', 'Ellora Nail', 'Sơn gel', '11:37 • 19/10/2026', 'mai@example.com', 'Chờ tiệm xác nhận']) expect(modal.textContent).toContain(text);
-    expect(modal.textContent).not.toContain('lịch sử'); expect(modal.querySelector('.success-modal__countdown')).toBeNull();
-    vi.advanceTimersByTime(31000); await flush(); expect(router.navigate).not.toHaveBeenCalled();
-    await component.confirmBooking(); expect(bookingApi.createGuestBooking).toHaveBeenCalledTimes(1);
-    modal.querySelector<HTMLButtonElement>('.btn-view-bookings')!.click(); await flush();
-    expect(router.navigate).toHaveBeenCalledWith(['/salon', '1']);
-  });
-
-  it('blocks duplicate requests and ignores a guest response after the page is destroyed', async () => {
-    let resolveBooking!: (value: GuestBookingReceipt) => void;
-    bookingApi.createGuestBooking.mockReturnValueOnce(new Promise<GuestBookingReceipt>(resolve => { resolveBooking = resolve; }));
-    const { component, root } = await render(); fillGuest(root);
-    const pending = component.confirmBooking(); await component.confirmBooking(); fixture.detectChanges();
-    expect(bookingApi.createGuestBooking).toHaveBeenCalledTimes(1); expect(root.querySelector<HTMLButtonElement>('.btn-pay')!.disabled).toBe(true);
-    fixture.destroy(); resolveBooking(receipt); await pending;
-    expect(component.guestReceipt()).toBeNull(); expect(component.showSuccessPopup()).toBe(false); expect(router.navigate).not.toHaveBeenCalled();
-  });
-
-  it('preserves guest details after a throttled request and allows retry with a friendly message', async () => {
-    bookingApi.createGuestBooking.mockRejectedValueOnce(new HttpErrorResponse({ status: 429, error: { message: 'Internal rate limit detail' } }));
-    const { component, root } = await render(); fillGuest(root); await component.confirmBooking(); fixture.detectChanges();
-    expect(root.querySelector('[role="alert"]')!.textContent).toContain('Vui lòng thử lại sau ít phút');
-    expect(root.textContent).not.toContain('Internal rate limit detail'); expect(component.saving()).toBe(false);
-    expect(component.customerForm.getRawValue()).toEqual({ fullName: '  Nguyễn Mai  ', phone: ' 0900123456 ', email: 'mai@example.com', notes: 'Màu hồng nhẹ' });
-    expect(component.showSuccessPopup()).toBe(false);
-    await component.confirmBooking(); expect(component.guestReceipt()?.id).toBe(123); expect(bookingApi.createGuestBooking).toHaveBeenCalledTimes(2);
+  it('does not create guest bookings after a failed login redirect', async () => {
+    const { component } = await render();
+    await component.confirmBooking(); await component.confirmBooking();
+    expect(bookingApi.createGuestBooking).not.toHaveBeenCalled(); expect(bookingApi.createBooking).not.toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledTimes(2);
   });
 
   it('keeps registered prefill, protected createBooking, optional profile email, and history countdown', async () => {

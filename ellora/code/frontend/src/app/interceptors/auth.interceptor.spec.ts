@@ -48,12 +48,13 @@ describe('API authentication cost', () => {
     request.flush({}); await result;
   });
 
-  it('sends only the exact guest POST immediately without a Cognito lookup', async () => {
-    auth.getAccessToken.mockReturnValue(new Promise(() => {}));
+  it('sends the guest endpoint with the customer access token', async () => {
+    auth.getAccessToken.mockResolvedValue('test-token');
     const result = firstValueFrom(http.post(apiConfig.baseUrl + '/bookings/guest', { email: 'mai@example.com' }));
+    await Promise.resolve();
     const request = requests.expectOne(apiConfig.baseUrl + '/bookings/guest');
-    expect(request.request.headers.has('Authorization')).toBe(false);
-    expect(auth.getAccessToken).not.toHaveBeenCalled();
+    expect(request.request.headers.get('Authorization')).toBe('Bearer test-token');
+    expect(auth.getAccessToken).toHaveBeenCalledOnce();
     request.flush({}); await result;
   });
 

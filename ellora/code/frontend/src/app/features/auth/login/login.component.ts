@@ -59,7 +59,7 @@ export class LoginComponent implements OnInit {
 
       const profile = await this.profileApiService.syncCurrentUser();
       this.isSuccess = true;
-      await this.router.navigateByUrl(roleHome(profile.role));
+      await this.router.navigateByUrl(this.postLoginDestination(profile.role));
     } catch {
       this.showAlert = true;
       this.alertMessage = 'Đã đăng nhập Google nhưng không kết nối được backend.';
@@ -228,7 +228,22 @@ export class LoginComponent implements OnInit {
   private async completeLogin(): Promise<void> {
     const profile = await this.profileApiService.syncCurrentUser();
     this.isSuccess = true;
-    await this.router.navigateByUrl(roleHome(profile.role));
+    await this.router.navigateByUrl(this.postLoginDestination(profile.role));
+  }
+
+  private postLoginDestination(role: 'ADMIN' | 'SALON_OWNER' | 'CUSTOMER'): string {
+    if (role !== 'CUSTOMER') return roleHome(role);
+    const requested = this.router.parseUrl(this.router.url).queryParams['returnUrl'];
+    if (typeof requested === 'string' && requested.startsWith('/booking?')) return requested;
+    try {
+      const pending = JSON.parse(window.sessionStorage.getItem('ellora.pendingBooking') ?? 'null') as { salonId?: unknown; serviceId?: unknown; createdAt?: unknown } | null;
+      if (pending && typeof pending.salonId === 'string' && typeof pending.serviceId === 'string' &&
+          typeof pending.createdAt === 'number' && Date.now() - pending.createdAt <= 30 * 60 * 1000) {
+        return `/booking?salonId=${encodeURIComponent(pending.salonId)}&serviceId=${encodeURIComponent(pending.serviceId)}&resume=1`;
+      }
+      window.sessionStorage.removeItem('ellora.pendingBooking');
+    } catch { /* No pending booking; continue to the normal customer landing page. */ }
+    return roleHome(role);
   }
 
   private startResendCooldown(): void {
