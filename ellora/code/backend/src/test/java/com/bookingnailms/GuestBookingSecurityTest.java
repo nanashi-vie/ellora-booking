@@ -54,14 +54,22 @@ class GuestBookingSecurityTest {
              "fullName":"Nguyễn Mai","phone":"0901234567","email":"mai@example.test","customerNote":"Sơn gel"}
             """;
 
-    @Test void anonymousCanBookAndReceivesOnlyAMinimalReceiptWithoutPrivateContactData() throws Exception {
+    @Test void anonymousCannotBookThroughTheGuestEndpoint() throws Exception {
+        mvc.perform(post("/bookings/guest").contentType("application/json").content(VALID))
+                .andExpect(status().isUnauthorized());
+        verifyNoInteractions(bookings, limiter);
+    }
+
+    @Test void authenticatedCustomerCanBookAndReceivesOnlyAMinimalReceiptWithoutPrivateContactData() throws Exception {
+        as(Role.CUSTOMER);
         when(bookings.createGuestBooking(any())).thenReturn(new GuestBookingReceipt(7L, BookingStatus.PENDING,
                 LocalDateTime.of(2026, 10, 18, 9, 7), "Ellora Nail", "Sơn gel"));
         ObjectNode body = (ObjectNode) json.readTree(VALID);
         body.put("customerId", UUID.randomUUID().toString());
         body.put("status", "CONFIRMED");
 
-        String content = mvc.perform(post("/bookings/guest").contentType("application/json").content(body.toString()))
+        String content = mvc.perform(post("/bookings/guest").header("Authorization", "Bearer test-token")
+                        .contentType("application/json").content(body.toString()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.id").value(7))
                 .andExpect(jsonPath("$.data.status").value("PENDING"))
@@ -78,13 +86,15 @@ class GuestBookingSecurityTest {
         assertEquals("0901234567", request.getValue().phone());
         assertEquals("mai@example.test", request.getValue().email());
         verify(limiter).check("mai@example.test");
-        verifyNoInteractions(users);
+        verify(users).findById(userId);
     }
 
     @ParameterizedTest
     @MethodSource("invalidBodies")
     void requiredContactsDateAndIdsAreValidatedBeforeLimiterOrBooking(String body) throws Exception {
-        mvc.perform(post("/bookings/guest").contentType("application/json").content(body))
+        as(Role.CUSTOMER);
+        mvc.perform(post("/bookings/guest").header("Authorization", "Bearer test-token")
+                        .contentType("application/json").content(body))
                 .andExpect(status().isBadRequest());
         verifyNoInteractions(bookings, limiter);
     }
@@ -133,7 +143,9 @@ class GuestBookingSecurityTest {
         verifyNoInteractions(bookings, limiter);
     }
 
-    @Test void makingGuestPostPublicDoesNotExposeOtherBookingMethodsOrPrivateRoutes() throws Exception {
+    @Test void guestEndpointAndOtherBookingRoutesRequireAuthentication() throws Exception {
+        mvc.perform(post("/bookings/guest").contentType("application/json").content(VALID))
+                .andExpect(status().isUnauthorized());
         mvc.perform(get("/bookings/guest")).andExpect(status().isUnauthorized());
         mvc.perform(get("/bookings/my")).andExpect(status().isUnauthorized());
         mvc.perform(post("/bookings").contentType("application/json").content(VALID))
@@ -145,8 +157,10 @@ class GuestBookingSecurityTest {
     }
 
     @Test void rateLimitedGuestCannotCreateAnotherBookingOrQueueMoreMail() throws Exception {
+        as(Role.CUSTOMER);
         doThrow(new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS)).when(limiter).check("mai@example.test");
-        mvc.perform(post("/bookings/guest").contentType("application/json").content(VALID))
+        mvc.perform(post("/bookings/guest").header("Authorization", "Bearer test-token")
+                        .contentType("application/json").content(VALID))
                 .andExpect(status().isTooManyRequests());
         verifyNoInteractions(bookings);
     }

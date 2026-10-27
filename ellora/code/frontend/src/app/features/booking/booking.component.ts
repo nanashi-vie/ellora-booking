@@ -24,6 +24,7 @@ interface CalendarDay {
   styleUrl: './booking.component.scss'
 })
 export class BookingComponent implements OnInit, OnDestroy {
+  private readonly pendingBookingStorageKey = 'ellora.pendingBooking';
   private salonApi = inject(SalonApiService);
   private bookingApi = inject(BookingApiService);
   private route = inject(ActivatedRoute);
@@ -96,6 +97,7 @@ export class BookingComponent implements OnInit, OnDestroy {
       this.error.set('Vui lòng chọn salon trước khi đặt lịch.');
       return;
     }
+    const resumeBooking = this.readPendingBooking(salonId);
     const identity = this.loadBookingIdentity();
     try {
       const [salon, services, staff, hours] = await Promise.all([
@@ -107,6 +109,16 @@ export class BookingComponent implements OnInit, OnDestroy {
       void this.loadClosedDates();
       const serviceId = this.route.snapshot.queryParamMap.get('serviceId');
       if (serviceId && services.some(service => service.id === serviceId)) this.selectedServiceIds.set([serviceId]);
+      if (resumeBooking) {
+        if (resumeBooking.serviceId && services.some(service => service.id === resumeBooking.serviceId)) this.selectedServiceIds.set([resumeBooking.serviceId]);
+        if (resumeBooking.employeeId && staff.some(employee => employee.id === resumeBooking.employeeId)) this.selectedStaffId.set(resumeBooking.employeeId);
+        else if (resumeBooking.employeeId === null) this.selectedStaffId.set('any');
+        this.selectedDate.set(resumeBooking.date);
+        this.selectedTime.set(resumeBooking.time);
+        this.customerForm.controls.notes.setValue(resumeBooking.customerNote ?? '');
+        this.currentStep.set(4);
+        try { window.sessionStorage.removeItem(this.pendingBookingStorageKey); } catch { /* Storage may be unavailable. */ }
+      }
     } catch { if (!this.destroyed) this.error.set('Không tải được thông tin salon. Vui lòng thử lại.'); }
     await identity;
   }
@@ -314,10 +326,28 @@ export class BookingComponent implements OnInit, OnDestroy {
 
   async confirmBooking() {
     if (!this.authReady() || this.saving() || this.destroyed || this.showSuccessPopup() || this.guestReceipt()) return;
+    if (this.guestMode()) {
+      const salonId = this.salon()?.id;
+      const serviceId = this.selectedServiceIds()[0];
+      const date = this.selectedDate();
+      const time = this.selectedTime();
+      if (!salonId || !serviceId || !date || !time || !this.selectedTimeValid()) {
+        this.error.set('Vui lòng kiểm tra lại dịch vụ và giờ hẹn trước khi đăng nhập.');
+        return;
+      }
+      try {
+        window.sessionStorage.setItem(this.pendingBookingStorageKey, JSON.stringify({
+          salonId: String(salonId), serviceId, employeeId: this.selectedStaffId() === 'any' ? null : this.selectedStaffId(),
+          date, time, customerNote: this.customerForm.controls.notes.value, createdAt: Date.now()
+        }));
+      } catch { /* The booking URL still restores salon and service if storage is unavailable. */ }
+      const returnUrl = `/booking?salonId=${encodeURIComponent(String(salonId))}&serviceId=${encodeURIComponent(serviceId)}`;
+      await this.router.navigate(['/login'], { queryParams: { returnUrl } });
+      return;
+    }
     this.refreshBookingTime();
-    if (this.guestMode()) this.customerForm.controls.email.setValue(this.customerForm.controls.email.value.trim(), { emitEvent: false });
     this.customerForm.markAllAsTouched();
-    if (this.customerForm.invalid) { this.error.set(this.guestMode() ? 'Vui lòng nhập họ tên, số điện thoại hợp lệ và email nhận thông tin lịch hẹn.' : 'Vui lòng nhập họ tên và số điện thoại hợp lệ.'); return; }
+    if (this.customerForm.invalid) { this.error.set('Vui lòng nhập họ tên và số điện thoại hợp lệ.'); return; }
     if (!this.salon() || !this.selectedServiceIds()[0] || !this.selectedDate() || !this.selectedTime() || this.saving()) return;
     if (!this.selectedTimeValid()) { this.error.set('Vui lòng chọn lại giờ hẹn, cách hiện tại ít nhất 1 tiếng và đủ thời lượng dịch vụ trước giờ đóng cửa.'); return; }
     this.saving.set(true); this.error.set('');
@@ -329,13 +359,7 @@ export class BookingComponent implements OnInit, OnDestroy {
         scheduledAt: `${this.selectedDate()}T${this.selectedTime()}:00`,
         customerNote: this.customerForm.controls.notes.value,
       };
-      if (this.guestMode()) {
-        const email = this.customerForm.controls.email.value.trim();
-        const receipt = await this.bookingApi.createGuestBooking({ ...request, fullName: this.customerForm.controls.fullName.value.trim(),
-          phone: this.customerForm.controls.phone.value.trim(), email });
-        if (this.destroyed) return;
-        this.guestReceipt.set(receipt); this.guestEmail.set(email);
-      } else await this.bookingApi.createBooking({ ...request, customerPhone: this.customerForm.controls.phone.value.trim() });
+      await this.bookingApi.createBooking({ ...request, customerPhone: this.customerForm.controls.phone.value.trim() });
     } catch (error) {
       if (this.destroyed) return;
       this.error.set(error instanceof HttpErrorResponse && error.status === 429
@@ -350,6 +374,21 @@ export class BookingComponent implements OnInit, OnDestroy {
     this.showSuccessPopup.set(true);
     this.countdown.set(30);
     if (!this.guestMode()) this.startCountdown();
+  }
+
+  private readPendingBooking(salonId: string): { serviceId: string; employeeId: string | null; date: string; time: string; customerNote?: string } | null {
+    try {
+      const raw = window.sessionStorage.getItem(this.pendingBookingStorageKey);
+      if (!raw) return null;
+      const value = JSON.parse(raw) as { salonId?: unknown; serviceId?: unknown; employeeId?: unknown; date?: unknown; time?: unknown; customerNote?: unknown; createdAt?: unknown };
+      if (String(value.salonId) !== salonId || typeof value.serviceId !== 'string' || typeof value.date !== 'string' || typeof value.time !== 'string' ||
+          typeof value.createdAt !== 'number' || Date.now() - value.createdAt > 30 * 60 * 1000) {
+        window.sessionStorage.removeItem(this.pendingBookingStorageKey);
+        return null;
+      }
+      return { serviceId: value.serviceId, employeeId: typeof value.employeeId === 'string' ? value.employeeId : null,
+        date: value.date, time: value.time, customerNote: typeof value.customerNote === 'string' ? value.customerNote : '' };
+    } catch { return null; }
   }
 
   startCountdown() {

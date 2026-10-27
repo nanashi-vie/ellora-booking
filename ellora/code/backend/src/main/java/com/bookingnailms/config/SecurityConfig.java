@@ -58,8 +58,7 @@ public class SecurityConfig {
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/owner/**").hasRole("SALON_OWNER")
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/bookings/guest")
-                                .access(new org.springframework.security.web.access.expression.WebExpressionAuthorizationManager(
-                                        "isAnonymous() or hasRole('CUSTOMER')"))
+                                .hasRole("CUSTOMER")
                         .requestMatchers("/bookings", "/bookings/**", "/reviews", "/reviews/**").hasRole("CUSTOMER")
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/business/registration").hasRole("CUSTOMER")
                         .anyRequest().authenticated()
